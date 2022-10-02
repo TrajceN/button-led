@@ -128,7 +128,7 @@ int main(void)
 			  HAL_GPIO_WritePin(GPIOD, GPIO_PIN_12|GPIO_PIN_13|GPIO_PIN_14|GPIO_PIN_15, 0);
 			  var = 0;
 		}
-		  HAL_Delay(200);
+		  //HAL_Delay(200);
 
   }
   /* USER CODE END 3 */
