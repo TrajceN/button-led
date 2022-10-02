@@ -89,7 +89,7 @@ bool Button_debounce() {
 	  return button_state_0;
 }
 
-//LED funkcija
+// Funkcija za vrtenje dioda
 void LEDs(void) {
  		 switch (var)
  		 {
