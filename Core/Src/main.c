@@ -55,6 +55,7 @@ static void MX_TIM10_Init(void);
 
 /* Private user code ---------------------------------------------------------*/
 /* USER CODE BEGIN 0 */
+void LEDs(void);
 //uint16_t timer_var;
 
 typedef enum
@@ -70,15 +71,16 @@ bool button_state_1;
 // Funkcija paljenje LED-a pomocu user button-a
 bool Button_debounce() {
 
-read_button = HAL_GPIO_ReadPin(GPIOA, user_button_B1_Pin);
-	  if (read_button != button_state_0) {
-		  if (read_button != button_state_1)
+	read_button = HAL_GPIO_ReadPin(GPIOA, user_button_B1_Pin);
+	if (read_button != button_state_0) {
+		HAL_Delay(20);
+		if (read_button != button_state_1)
 		  	{
 		  			button_state_1 = read_button;
 
 		  			if (button_state_1 == true)
 		  			{
-		  				int LEDs();
+		  				LEDs();
 		  			}
 		  	}
 	  }
@@ -88,32 +90,30 @@ read_button = HAL_GPIO_ReadPin(GPIOA, user_button_B1_Pin);
 }
 
 //LED funkcija
-int LEDs(){
- 		 if (button_state_1 == true && var == 0)
-		 {
-			  	 HAL_GPIO_WritePin(GPIOD, GPIO_PIN_12, 1);
-			  	 var++;
-		 }
-		else if (button_state_1 == true && var == 1)
-		 {
-				 HAL_GPIO_WritePin(GPIOD, GPIO_PIN_13, 1);
-				 var++;
-		 }
-		 else if (button_state_1 == true && var == 2)
-		 {
-			  	 HAL_GPIO_WritePin(GPIOD, GPIO_PIN_14, 1);
-			  	 var++;
-		 }
-		 else if (button_state_1 == true && var == 3)
-		 {
-			  	 HAL_GPIO_WritePin(GPIOD, GPIO_PIN_15, 1);
-			  	 var++;
-		 }
-		 else if (button_state_1 == true && var == 4) {
-			  	 HAL_GPIO_WritePin(GPIOD, GPIO_PIN_12|GPIO_PIN_13|GPIO_PIN_14|GPIO_PIN_15, 0);
-			  	 var = 0;
-		 }
-	return var;
+void LEDs(void) {
+ 		 switch (var)
+ 		 {
+ 		 	case 0:
+ 		 		HAL_GPIO_WritePin(GPIOD, GPIO_PIN_12, 1);
+ 		 		var++;
+ 		 	break;
+			case 1:
+				HAL_GPIO_WritePin(GPIOD, GPIO_PIN_13, 1);
+				var++;
+			break;
+			case 2:
+				HAL_GPIO_WritePin(GPIOD, GPIO_PIN_14, 1);
+				var++;
+			break;
+			case 3:
+				HAL_GPIO_WritePin(GPIOD, GPIO_PIN_15, 1);
+				var++;
+			break;
+			default:
+				var = 0;
+				HAL_GPIO_WritePin(GPIOD, GPIO_PIN_12|GPIO_PIN_13|GPIO_PIN_14|GPIO_PIN_15, 0);
+			break;
+ 		 }
 }
 
 
@@ -167,7 +167,6 @@ int main(void)
 
 
 	  Button_debounce();
-	  HAL_Delay(50);
 
 /*	 if ((__HAL_TIM_GET_COUNTER(&htim10) - timer_var) >= 20000){
 		 Button_debounce();
