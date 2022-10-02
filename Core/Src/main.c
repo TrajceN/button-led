@@ -94,20 +94,24 @@ void LEDs(void) {
  		 switch (var)
  		 {
  		 	case 0:
- 		 		HAL_GPIO_WritePin(GPIOD, GPIO_PIN_12, 1);
+ 		 		HAL_GPIO_WritePin(GPIOD, GPIO_PIN_13, 1);
+ 		 		HAL_GPIO_WritePin(GPIOD, GPIO_PIN_12, 0);
  		 		var++;
  		 	break;
 			case 1:
-				HAL_GPIO_WritePin(GPIOD, GPIO_PIN_13, 1);
+				HAL_GPIO_WritePin(GPIOD, GPIO_PIN_14, 1);
+				HAL_GPIO_WritePin(GPIOD, GPIO_PIN_13, 0);
 				var++;
 			break;
 			case 2:
-				HAL_GPIO_WritePin(GPIOD, GPIO_PIN_14, 1);
+				HAL_GPIO_WritePin(GPIOD, GPIO_PIN_15, 1);
+				HAL_GPIO_WritePin(GPIOD, GPIO_PIN_14, 0);
 				var++;
 			break;
 			case 3:
-				HAL_GPIO_WritePin(GPIOD, GPIO_PIN_15, 1);
-				var++;
+				HAL_GPIO_WritePin(GPIOD, GPIO_PIN_12, 1);
+				HAL_GPIO_WritePin(GPIOD, GPIO_PIN_15, 0);
+				var=0;
 			break;
 			default:
 				var = 0;
@@ -151,6 +155,7 @@ int main(void)
   /* Initialize all configured peripherals */
   MX_GPIO_Init();
   MX_TIM10_Init();
+  HAL_GPIO_WritePin(GPIOD, GPIO_PIN_12, 1);
   /* USER CODE BEGIN 2 */
 //  HAL_TIM_Base_Start(&htim10);
 //  timer_var = __HAL_TIM_GET_COUNTER(&htim10);
