@@ -39,6 +39,7 @@
 /* USER CODE END PM */
 
 /* Private variables ---------------------------------------------------------*/
+TIM_HandleTypeDef htim10;
 
 /* USER CODE BEGIN PV */
 
@@ -47,17 +48,75 @@
 /* Private function prototypes -----------------------------------------------*/
 void SystemClock_Config(void);
 static void MX_GPIO_Init(void);
+static void MX_TIM10_Init(void);
 /* USER CODE BEGIN PFP */
 
 /* USER CODE END PFP */
 
 /* Private user code ---------------------------------------------------------*/
 /* USER CODE BEGIN 0 */
+//uint16_t timer_var;
+
 typedef enum
 {
   false = 0,
   true
 } bool;
+
+bool read_button;
+int var = 0;
+bool button_state_0 = false;
+bool button_state_1;
+// Funkcija paljenje LED-a pomocu user button-a
+bool Button_debounce() {
+
+read_button = HAL_GPIO_ReadPin(GPIOA, user_button_B1_Pin);
+	  if (read_button != button_state_0) {
+		  if (read_button != button_state_1)
+		  	{
+		  			button_state_1 = read_button;
+
+		  			if (button_state_1 == true)
+		  			{
+		  				int LEDs();
+		  			}
+		  	}
+	  }
+	  button_state_0 = read_button;
+
+	  return button_state_0;
+}
+
+//LED funkcija
+int LEDs(){
+ 		 if (button_state_1 == true && var == 0)
+		 {
+			  	 HAL_GPIO_WritePin(GPIOD, GPIO_PIN_12, 1);
+			  	 var++;
+		 }
+		else if (button_state_1 == true && var == 1)
+		 {
+				 HAL_GPIO_WritePin(GPIOD, GPIO_PIN_13, 1);
+				 var++;
+		 }
+		 else if (button_state_1 == true && var == 2)
+		 {
+			  	 HAL_GPIO_WritePin(GPIOD, GPIO_PIN_14, 1);
+			  	 var++;
+		 }
+		 else if (button_state_1 == true && var == 3)
+		 {
+			  	 HAL_GPIO_WritePin(GPIOD, GPIO_PIN_15, 1);
+			  	 var++;
+		 }
+		 else if (button_state_1 == true && var == 4) {
+			  	 HAL_GPIO_WritePin(GPIOD, GPIO_PIN_12|GPIO_PIN_13|GPIO_PIN_14|GPIO_PIN_15, 0);
+			  	 var = 0;
+		 }
+	return var;
+}
+
+
 /* USER CODE END 0 */
 
 /**
@@ -67,6 +126,8 @@ typedef enum
 int main(void)
 {
   /* USER CODE BEGIN 1 */
+
+
 
   /* USER CODE END 1 */
 
@@ -84,16 +145,18 @@ int main(void)
 
   /* USER CODE BEGIN SysInit */
 
+
   /* USER CODE END SysInit */
 
   /* Initialize all configured peripherals */
   MX_GPIO_Init();
+  MX_TIM10_Init();
   /* USER CODE BEGIN 2 */
+//  HAL_TIM_Base_Start(&htim10);
+//  timer_var = __HAL_TIM_GET_COUNTER(&htim10);
 
   /* USER CODE END 2 */
 
-  bool read_button;
-  int var = 0;
   /* Infinite loop */
   /* USER CODE BEGIN WHILE */
   while (1)
@@ -101,35 +164,15 @@ int main(void)
     /* USER CODE END WHILE */
 
     /* USER CODE BEGIN 3 */
-	  read_button = HAL_GPIO_ReadPin(GPIOA, GPIO_PIN_0);
 
-//	  HAL_GPIO_WritePin(GPIOD, GPIO_PIN_12|GPIO_PIN_13|GPIO_PIN_14|GPIO_PIN_15, read_button);
-		if (read_button == true && var == 0)
-		  	  {
-		  		HAL_GPIO_WritePin(GPIOD, GPIO_PIN_12, 1);
-		  		var++;
-		  	  }
-		  else if (read_button == true && var == 1)
-		  	  {
-		  		HAL_GPIO_WritePin(GPIOD, GPIO_PIN_13, 1);
-		  		var++;
-		  	  }
-		  else if (read_button == true && var == 2)
-		  	  {
-			  	HAL_GPIO_WritePin(GPIOD, GPIO_PIN_14, 1);
-			  	var++;
-		  	  }
-		  else if (read_button == true && var == 3)
-		  	  {
-		  		HAL_GPIO_WritePin(GPIOD, GPIO_PIN_15, 1);
-		  		var++;
-		  	  }
-		  else if (read_button == true && var == 4) {
-			  HAL_GPIO_WritePin(GPIOD, GPIO_PIN_12|GPIO_PIN_13|GPIO_PIN_14|GPIO_PIN_15, 0);
-			  var = 0;
-		}
-		  //HAL_Delay(200);
 
+	  Button_debounce();
+	  HAL_Delay(50);
+
+/*	 if ((__HAL_TIM_GET_COUNTER(&htim10) - timer_var) >= 20000){
+		 Button_debounce();
+		 timer_var = __HAL_TIM_GET_COUNTER(&htim10);
+	 } */
   }
   /* USER CODE END 3 */
 }
@@ -180,6 +223,37 @@ void SystemClock_Config(void)
 }
 
 /**
+  * @brief TIM10 Initialization Function
+  * @param None
+  * @retval None
+  */
+static void MX_TIM10_Init(void)
+{
+
+  /* USER CODE BEGIN TIM10_Init 0 */
+
+  /* USER CODE END TIM10_Init 0 */
+
+  /* USER CODE BEGIN TIM10_Init 1 */
+
+  /* USER CODE END TIM10_Init 1 */
+  htim10.Instance = TIM10;
+  htim10.Init.Prescaler = 8400 - 1;
+  htim10.Init.CounterMode = TIM_COUNTERMODE_UP;
+  htim10.Init.Period = 65535;
+  htim10.Init.ClockDivision = TIM_CLOCKDIVISION_DIV1;
+  htim10.Init.AutoReloadPreload = TIM_AUTORELOAD_PRELOAD_DISABLE;
+  if (HAL_TIM_Base_Init(&htim10) != HAL_OK)
+  {
+    Error_Handler();
+  }
+  /* USER CODE BEGIN TIM10_Init 2 */
+
+  /* USER CODE END TIM10_Init 2 */
+
+}
+
+/**
   * @brief GPIO Initialization Function
   * @param None
   * @retval None
@@ -190,14 +264,17 @@ static void MX_GPIO_Init(void)
 
   /* GPIO Ports Clock Enable */
   __HAL_RCC_GPIOH_CLK_ENABLE();
-  __HAL_RCC_GPIOD_CLK_ENABLE();
   __HAL_RCC_GPIOA_CLK_ENABLE();
+  __HAL_RCC_GPIOD_CLK_ENABLE();
 
   /*Configure GPIO pin Output Level */
-  //HAL_GPIO_WritePin(GPIOD, GPIO_PIN_12|GPIO_PIN_13|GPIO_PIN_14|GPIO_PIN_15, GPIO_PIN_RESET);
+  HAL_GPIO_WritePin(GPIOD, GPIO_PIN_12|GPIO_PIN_13|GPIO_PIN_14|GPIO_PIN_15, GPIO_PIN_RESET);
 
-  /*Configure GPIO pin Input Level */
-  HAL_GPIO_WritePin(GPIOA, GPIO_PIN_0, GPIO_PIN_RESET);
+  /*Configure GPIO pin : user_button_B1_Pin */
+  GPIO_InitStruct.Pin = user_button_B1_Pin;
+  GPIO_InitStruct.Mode = GPIO_MODE_INPUT;
+  GPIO_InitStruct.Pull = GPIO_NOPULL;
+  HAL_GPIO_Init(user_button_B1_GPIO_Port, &GPIO_InitStruct);
 
   /*Configure GPIO pins : PD12 PD13 PD14 PD15 */
   GPIO_InitStruct.Pin = GPIO_PIN_12|GPIO_PIN_13|GPIO_PIN_14|GPIO_PIN_15;
@@ -206,12 +283,6 @@ static void MX_GPIO_Init(void)
   GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_LOW;
   HAL_GPIO_Init(GPIOD, &GPIO_InitStruct);
 
-  /*Configure GPIO pins : PA0 */
-	GPIO_InitStruct.Pin = GPIO_PIN_0;
-	GPIO_InitStruct.Mode = GPIO_MODE_INPUT;
-	GPIO_InitStruct.Pull = GPIO_NOPULL;
-	GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_LOW;
-	HAL_GPIO_Init(GPIOA, &GPIO_InitStruct);
 }
 
 /* USER CODE BEGIN 4 */
