@@ -56,18 +56,52 @@ static void MX_TIM10_Init(void);
 /* Private user code ---------------------------------------------------------*/
 /* USER CODE BEGIN 0 */
 void LEDs(void);
-//uint16_t timer_var;
+void timer_LEDs(void);
 
 typedef enum
 {
   false = 0,
   true
 } bool;
-
+//Variables
+uint16_t timer_var;
+uint16_t speed = 500;
 bool read_button;
 int var = 0;
 bool button_state_0 = false;
 bool button_state_1;
+
+/* FUNCTIONS */
+//Timer function
+void timer_LEDs(void){
+	if ((__HAL_TIM_GET_COUNTER(&htim10) - timer_var) >= speed){
+
+		  switch (var) {
+		  	  case 0:
+		  		HAL_GPIO_TogglePin(GPIOD, GPIO_PIN_12|GPIO_PIN_13);
+		  		timer_var = __HAL_TIM_GET_COUNTER(&htim10);
+		  		var++;
+		  		break;
+		  	  case 1:
+		  		HAL_GPIO_TogglePin(GPIOD, GPIO_PIN_13|GPIO_PIN_14);
+		  		timer_var = __HAL_TIM_GET_COUNTER(&htim10);
+		  		var++;
+		  		break;
+		  	  case 2:
+		  		HAL_GPIO_TogglePin(GPIOD, GPIO_PIN_14|GPIO_PIN_15);
+		   		timer_var = __HAL_TIM_GET_COUNTER(&htim10);
+		   		var++;
+		   		break;
+
+		  	  default:
+		  		HAL_GPIO_TogglePin(GPIOD, GPIO_PIN_15|GPIO_PIN_12);
+		  		timer_var = __HAL_TIM_GET_COUNTER(&htim10);
+		  		var = 0;
+		  		break;
+		  }
+	}
+}
+
 // Funkcija paljenje LED-a pomocu user button-a
 bool Button_debounce() {
 
@@ -157,8 +191,8 @@ int main(void)
   MX_TIM10_Init();
   /* USER CODE BEGIN 2 */
   HAL_GPIO_WritePin(GPIOD, GPIO_PIN_12, 1);
-//  HAL_TIM_Base_Start(&htim10);
-//  timer_var = __HAL_TIM_GET_COUNTER(&htim10);
+  HAL_TIM_Base_Start(&htim10);
+  timer_var = __HAL_TIM_GET_COUNTER(&htim10);
 
   /* USER CODE END 2 */
 
@@ -170,13 +204,9 @@ int main(void)
 
     /* USER CODE BEGIN 3 */
 //Working with timer
+	  timer_LEDs();
 
-	  Button_debounce();
 
-/*	 if ((__HAL_TIM_GET_COUNTER(&htim10) - timer_var) >= 10000){
-		 HAL_GPIO_TogglePin(GPIOD, GPIO_PIN_12);
-		 timer_var = __HAL_TIM_GET_COUNTER(&htim10);
-	 }*/
   }
   /* USER CODE END 3 */
 }
@@ -244,7 +274,7 @@ static void MX_TIM10_Init(void)
   htim10.Instance = TIM10;
   htim10.Init.Prescaler = 16800 - 1;
   htim10.Init.CounterMode = TIM_COUNTERMODE_UP;
-  htim10.Init.Period = 65535;
+  htim10.Init.Period = 20000 - 1;
   htim10.Init.ClockDivision = TIM_CLOCKDIVISION_DIV1;
   htim10.Init.AutoReloadPreload = TIM_AUTORELOAD_PRELOAD_DISABLE;
   if (HAL_TIM_Base_Init(&htim10) != HAL_OK)
