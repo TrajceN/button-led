@@ -155,8 +155,8 @@ int main(void)
   /* Initialize all configured peripherals */
   MX_GPIO_Init();
   MX_TIM10_Init();
-  HAL_GPIO_WritePin(GPIOD, GPIO_PIN_12, 1);
   /* USER CODE BEGIN 2 */
+  HAL_GPIO_WritePin(GPIOD, GPIO_PIN_12, 1);
 //  HAL_TIM_Base_Start(&htim10);
 //  timer_var = __HAL_TIM_GET_COUNTER(&htim10);
 
@@ -173,10 +173,10 @@ int main(void)
 
 	  Button_debounce();
 
-/*	 if ((__HAL_TIM_GET_COUNTER(&htim10) - timer_var) >= 20000){
-		 Button_debounce();
+/*	 if ((__HAL_TIM_GET_COUNTER(&htim10) - timer_var) >= 10000){
+		 HAL_GPIO_TogglePin(GPIOD, GPIO_PIN_12);
 		 timer_var = __HAL_TIM_GET_COUNTER(&htim10);
-	 } */
+	 }*/
   }
   /* USER CODE END 3 */
 }
@@ -242,7 +242,7 @@ static void MX_TIM10_Init(void)
 
   /* USER CODE END TIM10_Init 1 */
   htim10.Instance = TIM10;
-  htim10.Init.Prescaler = 8400 - 1;
+  htim10.Init.Prescaler = 16800 - 1;
   htim10.Init.CounterMode = TIM_COUNTERMODE_UP;
   htim10.Init.Period = 65535;
   htim10.Init.ClockDivision = TIM_CLOCKDIVISION_DIV1;
