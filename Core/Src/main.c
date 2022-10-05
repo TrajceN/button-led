@@ -57,7 +57,6 @@ static void MX_TIM10_Init(void);
 /* USER CODE BEGIN 0 */
 void LEDs(void);
 void timer_LEDs(void);
-
 typedef enum
 {
   false = 0,
@@ -65,8 +64,10 @@ typedef enum
 } bool;
 //Variables
 uint16_t timer_var;
-uint16_t speed = 500;
 bool read_button;
+const int max_speed_limit = 10000;
+const int lower_speed_limit = 200;
+uint16_t speed = max_speed_limit;
 int var = 0;
 bool button_state_0 = false;
 bool button_state_1;
@@ -112,13 +113,17 @@ bool Button_debounce() {
 		  	{
 		  			button_state_1 = read_button;
 
-		  			if (button_state_1 == true)
+		  			if (button_state_1 == true && speed > lower_speed_limit)
 		  			{
-		  				LEDs();
+		  				speed /= 2;
 		  			}
+		  			else if (speed <= lower_speed_limit){
+						speed = max_speed_limit;
+					}
 		  	}
 	  }
 	  button_state_0 = read_button;
+	  timer_LEDs();
 
 	  return button_state_0;
 }
@@ -204,8 +209,7 @@ int main(void)
 
     /* USER CODE BEGIN 3 */
 //Working with timer
-	  timer_LEDs();
-
+	  Button_debounce();
 
   }
   /* USER CODE END 3 */
