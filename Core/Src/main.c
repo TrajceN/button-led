@@ -59,22 +59,46 @@ static void MX_TIM4_Init(void);
 /* USER CODE BEGIN 0 */
 void LEDs(void);
 void timer_LEDs(void);
+void PWM_LEDs(void);
 typedef enum
 {
   false = 0,
   true
 } bool;
-//Variables
+//VARIABLES
+int compare;
+#define tim4_ARR_period  htim4.Init.Period
+
 uint16_t timer_var;
-bool read_button;
 const int max_speed_limit = 10000;
 const int lower_speed_limit = 200;
 uint16_t speed = max_speed_limit;
+
 int var = 0;
+bool read_button;
 bool button_state_0 = false;
 bool button_state_1;
 
 /* FUNCTIONS */
+//Light dimmer using PWM
+void PWM_LEDs(void){
+		  for (compare = 0; compare < tim4_ARR_period; compare++) {
+			__HAL_TIM_SET_COMPARE(&htim4, TIM_CHANNEL_1, compare);
+			__HAL_TIM_SET_COMPARE(&htim4, TIM_CHANNEL_2, compare);
+			__HAL_TIM_SET_COMPARE(&htim4, TIM_CHANNEL_3, compare);
+			__HAL_TIM_SET_COMPARE(&htim4, TIM_CHANNEL_4, compare);
+			HAL_Delay(1);
+		}
+		  for (compare = tim4_ARR_period; compare > 0; compare--) {
+		  	__HAL_TIM_SET_COMPARE(&htim4, TIM_CHANNEL_1, compare);
+		  	__HAL_TIM_SET_COMPARE(&htim4, TIM_CHANNEL_2, compare);
+		  	__HAL_TIM_SET_COMPARE(&htim4, TIM_CHANNEL_3, compare);
+		  	__HAL_TIM_SET_COMPARE(&htim4, TIM_CHANNEL_4, compare);
+		  	HAL_Delay(1);
+		  	}
+
+}
+
 //Timer function
 void timer_LEDs(void){
 	if ((__HAL_TIM_GET_COUNTER(&htim10) - timer_var) >= speed){
@@ -201,7 +225,7 @@ int main(void)
 //  HAL_GPIO_WritePin(GPIOD, GPIO_PIN_12, 1);
   HAL_TIM_Base_Start(&htim10);
   timer_var = __HAL_TIM_GET_COUNTER(&htim10);
-  int compare;
+
   HAL_TIM_PWM_Start(&htim4, TIM_CHANNEL_1);
   HAL_TIM_PWM_Start(&htim4, TIM_CHANNEL_2);
   HAL_TIM_PWM_Start(&htim4, TIM_CHANNEL_3);
@@ -216,21 +240,8 @@ int main(void)
     /* USER CODE END WHILE */
 
     /* USER CODE BEGIN 3 */
-//light dimmer using PWM
-	  for (compare = 0; compare < 1000; compare++) {
-		__HAL_TIM_SET_COMPARE(&htim4, TIM_CHANNEL_1, compare);
-		__HAL_TIM_SET_COMPARE(&htim4, TIM_CHANNEL_2, compare);
-		__HAL_TIM_SET_COMPARE(&htim4, TIM_CHANNEL_3, compare);
-		__HAL_TIM_SET_COMPARE(&htim4, TIM_CHANNEL_4, compare);
-		HAL_Delay(1);
-	}
-	  for (compare = 1000; compare > 0; compare--) {
-	  	__HAL_TIM_SET_COMPARE(&htim4, TIM_CHANNEL_1, compare);
-	  	__HAL_TIM_SET_COMPARE(&htim4, TIM_CHANNEL_2, compare);
-	  	__HAL_TIM_SET_COMPARE(&htim4, TIM_CHANNEL_3, compare);
-	  	__HAL_TIM_SET_COMPARE(&htim4, TIM_CHANNEL_4, compare);
-	  	HAL_Delay(1);
-	  	}
+//Light dimmer using PWM
+	  PWM_LEDs();
 
 
 
