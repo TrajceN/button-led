@@ -69,8 +69,8 @@ typedef enum
 int compare;
 #define tim4_ARR_period  htim4.Init.Period
 
-uint16_t timer_var;
-const int max_speed_limit = 10000;
+//uint16_t timer_var;
+const int max_speed_limit = 10000 - 1;
 const int lower_speed_limit = 200;
 uint16_t speed = max_speed_limit;
 
@@ -101,40 +101,35 @@ void PWM_LEDs(void){
 
 //Timer function
 void timer_LEDs(void){
-	if ((__HAL_TIM_GET_COUNTER(&htim10) - timer_var) >= speed){
-
+//	if ((__HAL_TIM_GET_COUNTER(&htim10) - timer_var) >= speed){
 		  switch (var) {
 		  	  case 0:
 		  		HAL_GPIO_TogglePin(GPIOD, GPIO_PIN_12|GPIO_PIN_13);
-		  		timer_var = __HAL_TIM_GET_COUNTER(&htim10);
 		  		var++;
 		  		break;
 		  	  case 1:
 		  		HAL_GPIO_TogglePin(GPIOD, GPIO_PIN_13|GPIO_PIN_14);
-		  		timer_var = __HAL_TIM_GET_COUNTER(&htim10);
 		  		var++;
 		  		break;
 		  	  case 2:
 		  		HAL_GPIO_TogglePin(GPIOD, GPIO_PIN_14|GPIO_PIN_15);
-		   		timer_var = __HAL_TIM_GET_COUNTER(&htim10);
 		   		var++;
 		   		break;
 
 		  	  default:
 		  		HAL_GPIO_TogglePin(GPIOD, GPIO_PIN_15|GPIO_PIN_12);
-		  		timer_var = __HAL_TIM_GET_COUNTER(&htim10);
 		  		var = 0;
 		  		break;
 		  }
 	}
-}
+
 
 // Funkcija paljenje LED-a pomocu user button-a
 bool Button_debounce() {
 
 	read_button = HAL_GPIO_ReadPin(GPIOA, user_button_B1_Pin);
 	if (read_button != button_state_0) {
-		HAL_Delay(20);
+	//	HAL_Delay(20);
 		if (read_button != button_state_1)
 		  	{
 		  			button_state_1 = read_button;
@@ -144,12 +139,11 @@ bool Button_debounce() {
 		  				speed /= 2;
 		  			}
 		  			else if (speed <= lower_speed_limit){
-						speed = max_speed_limit;
+		  				speed = max_speed_limit;
 					}
 		  	}
 	  }
 	  button_state_0 = read_button;
-	  timer_LEDs();
 
 	  return button_state_0;
 }
@@ -222,15 +216,17 @@ int main(void)
   MX_TIM10_Init();
   MX_TIM4_Init();
   /* USER CODE BEGIN 2 */
-//  HAL_GPIO_WritePin(GPIOD, GPIO_PIN_12, 1);
-  HAL_TIM_Base_Start(&htim10);
-  timer_var = __HAL_TIM_GET_COUNTER(&htim10);
+  HAL_GPIO_WritePin(GPIOD, GPIO_PIN_12, 1);
 
+  HAL_TIM_Base_Start_IT(&htim10);
+
+  //  timer_var = __HAL_TIM_GET_COUNTER(&htim10);
+/*
   HAL_TIM_PWM_Start(&htim4, TIM_CHANNEL_1);
   HAL_TIM_PWM_Start(&htim4, TIM_CHANNEL_2);
   HAL_TIM_PWM_Start(&htim4, TIM_CHANNEL_3);
   HAL_TIM_PWM_Start(&htim4, TIM_CHANNEL_4);
-
+*/
   /* USER CODE END 2 */
 
   /* Infinite loop */
@@ -240,13 +236,7 @@ int main(void)
     /* USER CODE END WHILE */
 
     /* USER CODE BEGIN 3 */
-//Light dimmer using PWM
-	  PWM_LEDs();
 
-
-
-//Working with timer
-	//  Button_debounce();
 
   }
   /* USER CODE END 3 */
@@ -311,7 +301,6 @@ static void MX_TIM4_Init(void)
 
   TIM_ClockConfigTypeDef sClockSourceConfig = {0};
   TIM_MasterConfigTypeDef sMasterConfig = {0};
-  TIM_OC_InitTypeDef sConfigOC = {0};
 
   /* USER CODE BEGIN TIM4_Init 1 */
 
@@ -331,40 +320,15 @@ static void MX_TIM4_Init(void)
   {
     Error_Handler();
   }
-  if (HAL_TIM_PWM_Init(&htim4) != HAL_OK)
-  {
-    Error_Handler();
-  }
   sMasterConfig.MasterOutputTrigger = TIM_TRGO_RESET;
   sMasterConfig.MasterSlaveMode = TIM_MASTERSLAVEMODE_DISABLE;
   if (HAL_TIMEx_MasterConfigSynchronization(&htim4, &sMasterConfig) != HAL_OK)
   {
     Error_Handler();
   }
-  sConfigOC.OCMode = TIM_OCMODE_PWM1;
-  sConfigOC.Pulse = 0;
-  sConfigOC.OCPolarity = TIM_OCPOLARITY_HIGH;
-  sConfigOC.OCFastMode = TIM_OCFAST_DISABLE;
-  if (HAL_TIM_PWM_ConfigChannel(&htim4, &sConfigOC, TIM_CHANNEL_1) != HAL_OK)
-  {
-    Error_Handler();
-  }
-  if (HAL_TIM_PWM_ConfigChannel(&htim4, &sConfigOC, TIM_CHANNEL_2) != HAL_OK)
-  {
-    Error_Handler();
-  }
-  if (HAL_TIM_PWM_ConfigChannel(&htim4, &sConfigOC, TIM_CHANNEL_3) != HAL_OK)
-  {
-    Error_Handler();
-  }
-  if (HAL_TIM_PWM_ConfigChannel(&htim4, &sConfigOC, TIM_CHANNEL_4) != HAL_OK)
-  {
-    Error_Handler();
-  }
   /* USER CODE BEGIN TIM4_Init 2 */
 
   /* USER CODE END TIM4_Init 2 */
-  HAL_TIM_MspPostInit(&htim4);
 
 }
 
@@ -386,7 +350,7 @@ static void MX_TIM10_Init(void)
   htim10.Instance = TIM10;
   htim10.Init.Prescaler = 16800 - 1;
   htim10.Init.CounterMode = TIM_COUNTERMODE_UP;
-  htim10.Init.Period = 20001 - 1;
+  htim10.Init.Period = 10000 - 1;
   htim10.Init.ClockDivision = TIM_CLOCKDIVISION_DIV1;
   htim10.Init.AutoReloadPreload = TIM_AUTORELOAD_PRELOAD_DISABLE;
   if (HAL_TIM_Base_Init(&htim10) != HAL_OK)
@@ -413,15 +377,35 @@ static void MX_GPIO_Init(void)
   __HAL_RCC_GPIOA_CLK_ENABLE();
   __HAL_RCC_GPIOD_CLK_ENABLE();
 
+  /*Configure GPIO pin Output Level */
+  HAL_GPIO_WritePin(GPIOD, GPIO_PIN_12|GPIO_PIN_13|GPIO_PIN_14|GPIO_PIN_15, GPIO_PIN_RESET);
+
   /*Configure GPIO pin : user_button_B1_Pin */
   GPIO_InitStruct.Pin = user_button_B1_Pin;
   GPIO_InitStruct.Mode = GPIO_MODE_INPUT;
   GPIO_InitStruct.Pull = GPIO_NOPULL;
   HAL_GPIO_Init(user_button_B1_GPIO_Port, &GPIO_InitStruct);
 
+  /*Configure GPIO pins : PD12 PD13 PD14 PD15 */
+  GPIO_InitStruct.Pin = GPIO_PIN_12|GPIO_PIN_13|GPIO_PIN_14|GPIO_PIN_15;
+  GPIO_InitStruct.Mode = GPIO_MODE_OUTPUT_PP;
+  GPIO_InitStruct.Pull = GPIO_NOPULL;
+  GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_LOW;
+  HAL_GPIO_Init(GPIOD, &GPIO_InitStruct);
+
 }
 
 /* USER CODE BEGIN 4 */
+
+//Callback: timer has reset
+void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim)
+{
+	if (htim == &htim10)
+	{
+		timer_LEDs();
+	}
+
+}
 
 /* USER CODE END 4 */
 
