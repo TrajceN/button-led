@@ -21,7 +21,10 @@
 
 /* Private includes ----------------------------------------------------------*/
 /* USER CODE BEGIN Includes */
-
+#include "button_debounce.h"
+#include "leds.h"
+#include "stdio.h"
+#include "string.h"
 /* USER CODE END Includes */
 
 /* Private typedef -----------------------------------------------------------*/
@@ -42,6 +45,8 @@
 TIM_HandleTypeDef htim4;
 TIM_HandleTypeDef htim10;
 
+UART_HandleTypeDef huart2;
+
 /* USER CODE BEGIN PV */
 
 /* USER CODE END PV */
@@ -51,134 +56,109 @@ void SystemClock_Config(void);
 static void MX_GPIO_Init(void);
 static void MX_TIM10_Init(void);
 static void MX_TIM4_Init(void);
+static void MX_USART2_UART_Init(void);
 /* USER CODE BEGIN PFP */
 
 /* USER CODE END PFP */
 
 /* Private user code ---------------------------------------------------------*/
 /* USER CODE BEGIN 0 */
-void LEDs(void);
-void timer_LEDs(void);
-void PWM_LEDs(void);
-typedef enum
-{
-  false = 0,
-  true
-} bool;
-//VARIABLES
-int compare;
-#define tim4_ARR_period  htim4.Init.Period
 
+void uart2_SSDisplay(void);
+
+//VARIABLES
 //uint16_t timer_var;
 const int max_speed_limit = 10000 - 1;
 const int lower_speed_limit = 200;
 uint16_t speed = max_speed_limit;
 
-int var = 0;
-bool read_button;
-bool button_state_0 = false;
-bool button_state_1;
+uint8_t main_cmd[] = "Enter command:\r\n";
+uint8_t type_cmd[] = "Type display command:\r\n";
+uint8_t error_msg[] = "Invalid command!\r\n";
+uint8_t newline[] = "\r\n";
+uint8_t cmd0[] = "Display set 0";
+uint8_t cmd1[] = "Display set 1";
+uint8_t cmd2[] = "Display set 2";
+uint8_t cmd3[] = "Display set 3";
+uint8_t cmd4[] = "Display set 4";
+uint8_t cmd5[] = "Display set 5";
+uint8_t cmd6[] = "Display set 6";
+uint8_t cmd7[] = "Display set 7";
+uint8_t cmd8[] = "Display set 8";
+uint8_t cmd9[] = "Display set 9";
+uint8_t UART2_rxBuffer[50];
+uint8_t segment_value;
+uint8_t display;
 
-/* FUNCTIONS */
-//Light dimmer using PWM
-void PWM_LEDs(void){
-		  for (compare = 0; compare < tim4_ARR_period; compare++) {
-			__HAL_TIM_SET_COMPARE(&htim4, TIM_CHANNEL_1, compare);
-			__HAL_TIM_SET_COMPARE(&htim4, TIM_CHANNEL_2, compare);
-			__HAL_TIM_SET_COMPARE(&htim4, TIM_CHANNEL_3, compare);
-			__HAL_TIM_SET_COMPARE(&htim4, TIM_CHANNEL_4, compare);
-			HAL_Delay(1);
-		}
-		  for (compare = tim4_ARR_period; compare > 0; compare--) {
-		  	__HAL_TIM_SET_COMPARE(&htim4, TIM_CHANNEL_1, compare);
-		  	__HAL_TIM_SET_COMPARE(&htim4, TIM_CHANNEL_2, compare);
-		  	__HAL_TIM_SET_COMPARE(&htim4, TIM_CHANNEL_3, compare);
-		  	__HAL_TIM_SET_COMPARE(&htim4, TIM_CHANNEL_4, compare);
-		  	HAL_Delay(1);
-		  	}
+void uart2_SSDisplay(void)
+{
 
-}
+	  HAL_UART_Transmit(&huart2, type_cmd, sizeof(type_cmd), 1000);
+	  HAL_UART_Receive(&huart2, UART2_rxBuffer, sizeof(UART2_rxBuffer), 10000);
 
-//Timer function
-void timer_LEDs(void){
-//	if ((__HAL_TIM_GET_COUNTER(&htim10) - timer_var) >= speed){
-		  switch (var) {
-		  	  case 0:
-		  		HAL_GPIO_TogglePin(GPIOD, GPIO_PIN_12|GPIO_PIN_13);
-		  		var++;
-		  		break;
-		  	  case 1:
-		  		HAL_GPIO_TogglePin(GPIOD, GPIO_PIN_13|GPIO_PIN_14);
-		  		var++;
-		  		break;
-		  	  case 2:
-		  		HAL_GPIO_TogglePin(GPIOD, GPIO_PIN_14|GPIO_PIN_15);
-		   		var++;
-		   		break;
-
-		  	  default:
-		  		HAL_GPIO_TogglePin(GPIOD, GPIO_PIN_15|GPIO_PIN_12);
-		  		var = 0;
-		  		break;
+//	  HAL_UART_Transmit(&huart2, newline, sizeof(newline), 500);
+	  for (int i = 0; i < 50; i++)
+	  {
+		  if (UART2_rxBuffer[i] == '\r')
+		  {
+			  UART2_rxBuffer[i] = '\0';
+			  break;
 		  }
-	}
-
-
-// Funkcija paljenje LED-a pomocu user button-a
-bool Button_debounce() {
-
-	read_button = HAL_GPIO_ReadPin(GPIOA, user_button_B1_Pin);
-	if (read_button != button_state_0) {
-	//	HAL_Delay(20);
-		if (read_button != button_state_1)
-		  	{
-		  			button_state_1 = read_button;
-
-		  			if (button_state_1 == true && speed > lower_speed_limit)
-		  			{
-		  				speed /= 2;
-		  			}
-		  			else if (speed <= lower_speed_limit){
-		  				speed = max_speed_limit;
-					}
-		  	}
 	  }
-	  button_state_0 = read_button;
 
-	  return button_state_0;
+	  if (strcmp(UART2_rxBuffer, cmd0) == 0)
+	  {
+		  segment_value = 0;
+	  }
+	  else if(strcmp(UART2_rxBuffer, cmd1) == 0)
+	  {
+		  segment_value = 1;
+	  }
+	  else if (strcmp(UART2_rxBuffer, cmd2) == 0)
+	  {
+		  segment_value = 2;
+	  }
+	  else if (strcmp(UART2_rxBuffer, cmd3) == 0)
+	  {
+		  segment_value = 3;
+	  }
+	  else if (strcmp(UART2_rxBuffer, cmd4) == 0)
+	  {
+		  segment_value = 4;
+	  }
+	  else if (strcmp(UART2_rxBuffer, cmd5) == 0)
+	  {
+		  segment_value = 5;
+	  }
+	  else if (strcmp(UART2_rxBuffer, cmd6) == 0)
+	  {
+		  segment_value = 6;
+	  }
+	  else if (strcmp(UART2_rxBuffer, cmd7) == 0)
+	  {
+		  segment_value = 7;
+	  }
+	  else if (strcmp(UART2_rxBuffer, cmd8) == 0)
+	  {
+		  segment_value = 8;
+	  }
+	  else if (strcmp(UART2_rxBuffer, cmd9) == 0)
+	  {
+		  segment_value = 9;
+	  }
+	  else if (strcmp(UART2_rxBuffer, "exit") == 0)
+	  {
+		  display = 1;
+		  segment_value = 36;			//any radnom number except 0-9
+	  }
+	  else
+	  {
+		  HAL_UART_Transmit(&huart2, error_msg, sizeof(error_msg), 1000);
+	  }
+	  seven_segment_display(segment_value);
+
+
 }
-
-// Funkcija za vrtenje dioda
-void LEDs(void) {
- 		 switch (var)
- 		 {
- 		 	case 0:
- 		 		HAL_GPIO_WritePin(GPIOD, GPIO_PIN_13, 1);
- 		 		HAL_GPIO_WritePin(GPIOD, GPIO_PIN_12, 0);
- 		 		var++;
- 		 	break;
-			case 1:
-				HAL_GPIO_WritePin(GPIOD, GPIO_PIN_14, 1);
-				HAL_GPIO_WritePin(GPIOD, GPIO_PIN_13, 0);
-				var++;
-			break;
-			case 2:
-				HAL_GPIO_WritePin(GPIOD, GPIO_PIN_15, 1);
-				HAL_GPIO_WritePin(GPIOD, GPIO_PIN_14, 0);
-				var++;
-			break;
-			case 3:
-				HAL_GPIO_WritePin(GPIOD, GPIO_PIN_12, 1);
-				HAL_GPIO_WritePin(GPIOD, GPIO_PIN_15, 0);
-				var=0;
-			break;
-			default:
-				var = 0;
-				HAL_GPIO_WritePin(GPIOD, GPIO_PIN_12|GPIO_PIN_13|GPIO_PIN_14|GPIO_PIN_15, 0);
-			break;
- 		 }
-}
-
 
 /* USER CODE END 0 */
 
@@ -215,10 +195,11 @@ int main(void)
   MX_GPIO_Init();
   MX_TIM10_Init();
   MX_TIM4_Init();
+  MX_USART2_UART_Init();
   /* USER CODE BEGIN 2 */
-  HAL_GPIO_WritePin(GPIOD, GPIO_PIN_12, 1);
+//  HAL_GPIO_WritePin(GPIOD, GPIO_PIN_12, 1);
 
-  HAL_TIM_Base_Start_IT(&htim10);
+//  HAL_TIM_Base_Start_IT(&htim10);
 
   //  timer_var = __HAL_TIM_GET_COUNTER(&htim10);
 /*
@@ -231,11 +212,42 @@ int main(void)
 
   /* Infinite loop */
   /* USER CODE BEGIN WHILE */
+  char store_buffer[50];
   while (1)
   {
     /* USER CODE END WHILE */
 
     /* USER CODE BEGIN 3 */
+
+	  HAL_UART_Transmit(&huart2, main_cmd, sizeof(main_cmd), 1000);
+	  HAL_UART_Receive(&huart2, UART2_rxBuffer, sizeof(UART2_rxBuffer), 10000);
+	  for (int k = 0; k < 50; k++)
+	  {
+		  store_buffer[k] = UART2_rxBuffer[k];
+		  if (UART2_rxBuffer[k] == '\r')
+	 	 {
+			  UART2_rxBuffer[k] = '\0';
+			  store_buffer[k] = '\0';
+			  break;
+		 }
+
+	  }
+	  display = strcmp(UART2_rxBuffer, "Display");
+	  if (display == 0)
+	  {
+		  while(display == 0)
+		  {
+		  uart2_SSDisplay();
+		  }
+	  }
+	  else
+	  {
+		  HAL_UART_Transmit(&huart2, error_msg, sizeof(error_msg), 1000);
+	  }
+
+
+//	  button_debounce2();
+
 
 
   }
@@ -364,6 +376,39 @@ static void MX_TIM10_Init(void)
 }
 
 /**
+  * @brief USART2 Initialization Function
+  * @param None
+  * @retval None
+  */
+static void MX_USART2_UART_Init(void)
+{
+
+  /* USER CODE BEGIN USART2_Init 0 */
+
+  /* USER CODE END USART2_Init 0 */
+
+  /* USER CODE BEGIN USART2_Init 1 */
+
+  /* USER CODE END USART2_Init 1 */
+  huart2.Instance = USART2;
+  huart2.Init.BaudRate = 115200;
+  huart2.Init.WordLength = UART_WORDLENGTH_8B;
+  huart2.Init.StopBits = UART_STOPBITS_1;
+  huart2.Init.Parity = UART_PARITY_NONE;
+  huart2.Init.Mode = UART_MODE_TX_RX;
+  huart2.Init.HwFlowCtl = UART_HWCONTROL_NONE;
+  huart2.Init.OverSampling = UART_OVERSAMPLING_16;
+  if (HAL_UART_Init(&huart2) != HAL_OK)
+  {
+    Error_Handler();
+  }
+  /* USER CODE BEGIN USART2_Init 2 */
+
+  /* USER CODE END USART2_Init 2 */
+
+}
+
+/**
   * @brief GPIO Initialization Function
   * @param None
   * @retval None
@@ -375,16 +420,30 @@ static void MX_GPIO_Init(void)
   /* GPIO Ports Clock Enable */
   __HAL_RCC_GPIOH_CLK_ENABLE();
   __HAL_RCC_GPIOA_CLK_ENABLE();
+  __HAL_RCC_GPIOB_CLK_ENABLE();
   __HAL_RCC_GPIOD_CLK_ENABLE();
+
+  /*Configure GPIO pin Output Level */
+  HAL_GPIO_WritePin(GPIOB, pin_e_Pin|pin_f_Pin|pin_g_Pin|pin_dp_Pin
+                          |pin_a_Pin|pin_b_Pin|pin_c_Pin|pin_d_Pin, GPIO_PIN_RESET);
 
   /*Configure GPIO pin Output Level */
   HAL_GPIO_WritePin(GPIOD, GPIO_PIN_12|GPIO_PIN_13|GPIO_PIN_14|GPIO_PIN_15, GPIO_PIN_RESET);
 
-  /*Configure GPIO pin : user_button_B1_Pin */
-  GPIO_InitStruct.Pin = user_button_B1_Pin;
+  /*Configure GPIO pin : PA0 */
+  GPIO_InitStruct.Pin = GPIO_PIN_0;
   GPIO_InitStruct.Mode = GPIO_MODE_INPUT;
   GPIO_InitStruct.Pull = GPIO_NOPULL;
-  HAL_GPIO_Init(user_button_B1_GPIO_Port, &GPIO_InitStruct);
+  HAL_GPIO_Init(GPIOA, &GPIO_InitStruct);
+
+  /*Configure GPIO pins : pin_e_Pin pin_f_Pin pin_g_Pin pin_dp_Pin
+                           pin_a_Pin pin_b_Pin pin_c_Pin pin_d_Pin */
+  GPIO_InitStruct.Pin = pin_e_Pin|pin_f_Pin|pin_g_Pin|pin_dp_Pin
+                          |pin_a_Pin|pin_b_Pin|pin_c_Pin|pin_d_Pin;
+  GPIO_InitStruct.Mode = GPIO_MODE_OUTPUT_PP;
+  GPIO_InitStruct.Pull = GPIO_NOPULL;
+  GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_LOW;
+  HAL_GPIO_Init(GPIOB, &GPIO_InitStruct);
 
   /*Configure GPIO pins : PD12 PD13 PD14 PD15 */
   GPIO_InitStruct.Pin = GPIO_PIN_12|GPIO_PIN_13|GPIO_PIN_14|GPIO_PIN_15;
@@ -396,9 +455,34 @@ static void MX_GPIO_Init(void)
 }
 
 /* USER CODE BEGIN 4 */
+//USART2 interrupt
+/*void HAL_UART_RxCpltCallback(UART_HandleTypeDef *huart){
+
+	uint8_t result;
+	HAL_UART_Transmit(&huart2, UART2_rxBuffer, 4, 50);
+	HAL_UART_Receive_IT(&huart2, UART2_rxBuffer, 4);
+
+	result = strcmp(UART2_rxBuffer, "led1");
+	if (result == 1) {
+		HAL_GPIO_WritePin(GPIOD, GPIO_PIN_12, 0);
+	}else {
+		HAL_GPIO_WritePin(GPIOD, GPIO_PIN_12, 1);
+	}
+
+
+}
+*/
+//Button interrupt callback
+/*
+void HAL_GPIO_EXTI_Callback(uint16_t GPIO_Pin){
+	if (GPIO_Pin == GPIO_PIN_0) {
+		read_button = HAL_GPIO_ReadPin(GPIOA, GPIO_PIN_0);
+	}
+}
+*/
 
 //Callback: timer has reset
-void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim)
+/*void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim)
 {
 	if (htim == &htim10)
 	{
@@ -406,7 +490,7 @@ void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim)
 	}
 
 }
-
+*/
 /* USER CODE END 4 */
 
 /**
