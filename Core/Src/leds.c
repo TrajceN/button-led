@@ -7,12 +7,14 @@
 #include "stm32f4xx_hal.h"
 #include "stm32f4xx_hal_def.h"
 #include "main.h"
+#include "leds.h"
 
 //Variables
 int var = 0;
 int compare = 0;
 
 /* --------------------Functions---------------------------------------- */
+#if 0
 void seven_segment_display(unsigned int SSD_numbers){
 
 	HAL_GPIO_WritePin(GPIOB, pin_a_Pin|pin_b_Pin|pin_c_Pin|pin_d_Pin|pin_e_Pin|pin_f_Pin|pin_g_Pin|pin_dp_Pin, 0);
@@ -58,7 +60,7 @@ void seven_segment_display(unsigned int SSD_numbers){
 
 }
 
-
+#endif
 
 void LEDs(void) {
  		 switch (var)
@@ -87,24 +89,24 @@ void LEDs(void) {
 }
 
 //Light dimmer using PWM
-/*void PWM_LEDs(void){
-		  for (compare = 0; compare < tim4_ARR_period; compare++) {
+void PWM_LEDs(void){
+		  for (compare = 0; compare < 1000; compare++) {
 			__HAL_TIM_SET_COMPARE(&htim4, TIM_CHANNEL_1, compare);
-			__HAL_TIM_SET_COMPARE(&htim4, TIM_CHANNEL_2, compare);
-			__HAL_TIM_SET_COMPARE(&htim4, TIM_CHANNEL_3, compare);
-			__HAL_TIM_SET_COMPARE(&htim4, TIM_CHANNEL_4, compare);
+//			__HAL_TIM_SET_COMPARE(&htim4, TIM_CHANNEL_2, compare);
+//			__HAL_TIM_SET_COMPARE(&htim4, TIM_CHANNEL_3, compare);
+//			__HAL_TIM_SET_COMPARE(&htim4, TIM_CHANNEL_4, compare);
 			HAL_Delay(1);
 		}
-		  for (compare = tim4_ARR_period; compare > 0; compare--) {
+		  for (compare = 1000; compare > 0; compare--) {
 		  	__HAL_TIM_SET_COMPARE(&htim4, TIM_CHANNEL_1, compare);
-		  	__HAL_TIM_SET_COMPARE(&htim4, TIM_CHANNEL_2, compare);
-		  	__HAL_TIM_SET_COMPARE(&htim4, TIM_CHANNEL_3, compare);
-		  	__HAL_TIM_SET_COMPARE(&htim4, TIM_CHANNEL_4, compare);
+//		  	__HAL_TIM_SET_COMPARE(&htim4, TIM_CHANNEL_2, compare);
+//		  	__HAL_TIM_SET_COMPARE(&htim4, TIM_CHANNEL_3, compare);
+//		  	__HAL_TIM_SET_COMPARE(&htim4, TIM_CHANNEL_4, compare);
 		  	HAL_Delay(1);
 		  	}
 
 }
-*/
+
 //Timer function
 void timer_LEDs(void){
 //	if ((__HAL_TIM_GET_COUNTER(&htim10) - timer_var) >= speed){

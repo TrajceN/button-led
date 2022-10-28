@@ -22,9 +22,7 @@
 /* Private includes ----------------------------------------------------------*/
 /* USER CODE BEGIN Includes */
 #include "button_debounce.h"
-#include "leds.h"
 #include "stdio.h"
-#include "string.h"
 /* USER CODE END Includes */
 
 /* Private typedef -----------------------------------------------------------*/
@@ -42,6 +40,11 @@
 /* USER CODE END PM */
 
 /* Private variables ---------------------------------------------------------*/
+ADC_HandleTypeDef hadc1;
+
+SPI_HandleTypeDef hspi1;
+
+TIM_HandleTypeDef htim3;
 TIM_HandleTypeDef htim4;
 TIM_HandleTypeDef htim10;
 
@@ -57,109 +60,55 @@ static void MX_GPIO_Init(void);
 static void MX_TIM10_Init(void);
 static void MX_TIM4_Init(void);
 static void MX_USART2_UART_Init(void);
+static void MX_TIM3_Init(void);
+static void MX_ADC1_Init(void);
+static void MX_SPI1_Init(void);
 /* USER CODE BEGIN PFP */
-
+void displayDigits(void);
 /* USER CODE END PFP */
 
 /* Private user code ---------------------------------------------------------*/
 /* USER CODE BEGIN 0 */
-
-void uart2_SSDisplay(void);
-
+#define ADC_max htim4.Init.Period
 //VARIABLES
-//uint16_t timer_var;
 const int max_speed_limit = 10000 - 1;
 const int lower_speed_limit = 200;
 uint16_t speed = max_speed_limit;
 
+
 uint8_t main_cmd[] = "Enter command:\r\n";
 uint8_t type_cmd[] = "Type display command:\r\n";
+uint8_t buzzer_cmd[] = "Enter buzzer command:\r\n";
 uint8_t error_msg[] = "Invalid command!\r\n";
-uint8_t newline[] = "\r\n";
-uint8_t cmd0[] = "Display set 0";
-uint8_t cmd1[] = "Display set 1";
-uint8_t cmd2[] = "Display set 2";
-uint8_t cmd3[] = "Display set 3";
-uint8_t cmd4[] = "Display set 4";
-uint8_t cmd5[] = "Display set 5";
-uint8_t cmd6[] = "Display set 6";
-uint8_t cmd7[] = "Display set 7";
-uint8_t cmd8[] = "Display set 8";
-uint8_t cmd9[] = "Display set 9";
-uint8_t UART2_rxBuffer[50];
-uint8_t segment_value;
-uint8_t display;
 
-void uart2_SSDisplay(void)
+uint16_t pot_value = 0;
+uint8_t tx_adc[5] = {0};
+
+
+//SPI1 variables
+uint8_t digits[10] = {
+		0B10111111,		//digit 0
+		0B10000110,		//digit 1
+		0B11011011,		//digit 2
+		0B11001111,		//digit 3
+		0B11100110,		//digit 4
+		0B11101101,		//digit 5
+		0B11111101,		//digit 6
+		0B10000111,		//digit 7
+		0B11111111,		//digit 8
+		0B11101111		//digit 9
+};//	 dpgfedcba
+
+void displayDigits(void)
 {
-
-	  HAL_UART_Transmit(&huart2, type_cmd, sizeof(type_cmd), 1000);
-	  HAL_UART_Receive(&huart2, UART2_rxBuffer, sizeof(UART2_rxBuffer), 10000);
-
-//	  HAL_UART_Transmit(&huart2, newline, sizeof(newline), 500);
-	  for (int i = 0; i < 50; i++)
-	  {
-		  if (UART2_rxBuffer[i] == '\r')
-		  {
-			  UART2_rxBuffer[i] = '\0';
-			  break;
-		  }
-	  }
-
-	  if (strcmp(UART2_rxBuffer, cmd0) == 0)
-	  {
-		  segment_value = 0;
-	  }
-	  else if(strcmp(UART2_rxBuffer, cmd1) == 0)
-	  {
-		  segment_value = 1;
-	  }
-	  else if (strcmp(UART2_rxBuffer, cmd2) == 0)
-	  {
-		  segment_value = 2;
-	  }
-	  else if (strcmp(UART2_rxBuffer, cmd3) == 0)
-	  {
-		  segment_value = 3;
-	  }
-	  else if (strcmp(UART2_rxBuffer, cmd4) == 0)
-	  {
-		  segment_value = 4;
-	  }
-	  else if (strcmp(UART2_rxBuffer, cmd5) == 0)
-	  {
-		  segment_value = 5;
-	  }
-	  else if (strcmp(UART2_rxBuffer, cmd6) == 0)
-	  {
-		  segment_value = 6;
-	  }
-	  else if (strcmp(UART2_rxBuffer, cmd7) == 0)
-	  {
-		  segment_value = 7;
-	  }
-	  else if (strcmp(UART2_rxBuffer, cmd8) == 0)
-	  {
-		  segment_value = 8;
-	  }
-	  else if (strcmp(UART2_rxBuffer, cmd9) == 0)
-	  {
-		  segment_value = 9;
-	  }
-	  else if (strcmp(UART2_rxBuffer, "exit") == 0)
-	  {
-		  display = 1;
-		  segment_value = 36;			//any radnom number except 0-9
-	  }
-	  else
-	  {
-		  HAL_UART_Transmit(&huart2, error_msg, sizeof(error_msg), 1000);
-	  }
-	  seven_segment_display(segment_value);
-
-
+	for (int i = 1; i < 11; i++)
+	{
+		HAL_GPIO_WritePin(Latch_GPIO_Port, Latch_Pin, GPIO_PIN_RESET);
+		HAL_SPI_Transmit(&hspi1, digits, i, 50);
+		HAL_GPIO_WritePin(Latch_GPIO_Port, Latch_Pin, GPIO_PIN_SET);
+		HAL_Delay(300);
+	}
 }
-
 /* USER CODE END 0 */
 
 /**
@@ -196,56 +145,71 @@ int main(void)
   MX_TIM10_Init();
   MX_TIM4_Init();
   MX_USART2_UART_Init();
+  MX_TIM3_Init();
+  MX_ADC1_Init();
+  MX_SPI1_Init();
   /* USER CODE BEGIN 2 */
-//  HAL_GPIO_WritePin(GPIOD, GPIO_PIN_12, 1);
 
-//  HAL_TIM_Base_Start_IT(&htim10);
 
-  //  timer_var = __HAL_TIM_GET_COUNTER(&htim10);
-/*
-  HAL_TIM_PWM_Start(&htim4, TIM_CHANNEL_1);
-  HAL_TIM_PWM_Start(&htim4, TIM_CHANNEL_2);
-  HAL_TIM_PWM_Start(&htim4, TIM_CHANNEL_3);
-  HAL_TIM_PWM_Start(&htim4, TIM_CHANNEL_4);
-*/
+//	HAL_TIM_PWM_Start(&htim4, TIM_CHANNEL_1);
+//  HAL_TIM_PWM_Start(&htim4, TIM_CHANNEL_2);
+//  HAL_TIM_PWM_Start(&htim4, TIM_CHANNEL_3);
+//  HAL_TIM_PWM_Start(&htim4, TIM_CHANNEL_4);
+
+//  HAL_TIM_PWM_Start(&htim3, TIM_CHANNEL_3);
+
   /* USER CODE END 2 */
 
   /* Infinite loop */
   /* USER CODE BEGIN WHILE */
-  char store_buffer[50];
   while (1)
   {
     /* USER CODE END WHILE */
 
     /* USER CODE BEGIN 3 */
 
-	  HAL_UART_Transmit(&huart2, main_cmd, sizeof(main_cmd), 1000);
+	  displayDigits();
+
+//	  HAL_ADC_Start_IT(&hadc1);
+//	  button_debounce2(tx_adc);
+//	  HAL_ADC_PollForConversion(&hadc1, 1);
+
+//	  RX_uart_cmd();
+
+
+#if 0
 	  HAL_UART_Receive(&huart2, UART2_rxBuffer, sizeof(UART2_rxBuffer), 10000);
 	  for (int k = 0; k < 50; k++)
 	  {
-		  store_buffer[k] = UART2_rxBuffer[k];
 		  if (UART2_rxBuffer[k] == '\r')
 	 	 {
 			  UART2_rxBuffer[k] = '\0';
-			  store_buffer[k] = '\0';
 			  break;
 		 }
 
 	  }
+
 	  display = strcmp(UART2_rxBuffer, "Display");
+	  buzzer = strcmp(UART2_rxBuffer, "Buzzer");
 	  if (display == 0)
 	  {
 		  while(display == 0)
 		  {
-		  uart2_SSDisplay();
+			  uart2_SSDisplay();
+		  }
+	  }
+	  else if (buzzer == 0)
+	  {
+		  while(buzzer == 0)
+		  {
+			  uart2_buzzer();
 		  }
 	  }
 	  else
 	  {
 		  HAL_UART_Transmit(&huart2, error_msg, sizeof(error_msg), 1000);
 	  }
-
-
+#endif
 //	  button_debounce2();
 
 
@@ -300,6 +264,155 @@ void SystemClock_Config(void)
 }
 
 /**
+  * @brief ADC1 Initialization Function
+  * @param None
+  * @retval None
+  */
+static void MX_ADC1_Init(void)
+{
+
+  /* USER CODE BEGIN ADC1_Init 0 */
+
+  /* USER CODE END ADC1_Init 0 */
+
+  ADC_ChannelConfTypeDef sConfig = {0};
+
+  /* USER CODE BEGIN ADC1_Init 1 */
+
+  /* USER CODE END ADC1_Init 1 */
+
+  /** Configure the global features of the ADC (Clock, Resolution, Data Alignment and number of conversion)
+  */
+  hadc1.Instance = ADC1;
+  hadc1.Init.ClockPrescaler = ADC_CLOCK_SYNC_PCLK_DIV4;
+  hadc1.Init.Resolution = ADC_RESOLUTION_12B;
+  hadc1.Init.ScanConvMode = DISABLE;
+  hadc1.Init.ContinuousConvMode = ENABLE;
+  hadc1.Init.DiscontinuousConvMode = DISABLE;
+  hadc1.Init.ExternalTrigConvEdge = ADC_EXTERNALTRIGCONVEDGE_NONE;
+  hadc1.Init.ExternalTrigConv = ADC_SOFTWARE_START;
+  hadc1.Init.DataAlign = ADC_DATAALIGN_RIGHT;
+  hadc1.Init.NbrOfConversion = 1;
+  hadc1.Init.DMAContinuousRequests = DISABLE;
+  hadc1.Init.EOCSelection = ADC_EOC_SINGLE_CONV;
+  if (HAL_ADC_Init(&hadc1) != HAL_OK)
+  {
+    Error_Handler();
+  }
+
+  /** Configure for the selected ADC regular channel its corresponding rank in the sequencer and its sample time.
+  */
+  sConfig.Channel = ADC_CHANNEL_1;
+  sConfig.Rank = 1;
+  sConfig.SamplingTime = ADC_SAMPLETIME_3CYCLES;
+  if (HAL_ADC_ConfigChannel(&hadc1, &sConfig) != HAL_OK)
+  {
+    Error_Handler();
+  }
+  /* USER CODE BEGIN ADC1_Init 2 */
+
+  /* USER CODE END ADC1_Init 2 */
+
+}
+
+/**
+  * @brief SPI1 Initialization Function
+  * @param None
+  * @retval None
+  */
+static void MX_SPI1_Init(void)
+{
+
+  /* USER CODE BEGIN SPI1_Init 0 */
+
+  /* USER CODE END SPI1_Init 0 */
+
+  /* USER CODE BEGIN SPI1_Init 1 */
+
+  /* USER CODE END SPI1_Init 1 */
+  /* SPI1 parameter configuration*/
+  hspi1.Instance = SPI1;
+  hspi1.Init.Mode = SPI_MODE_MASTER;
+  hspi1.Init.Direction = SPI_DIRECTION_2LINES;
+  hspi1.Init.DataSize = SPI_DATASIZE_8BIT;
+  hspi1.Init.CLKPolarity = SPI_POLARITY_LOW;
+  hspi1.Init.CLKPhase = SPI_PHASE_1EDGE;
+  hspi1.Init.NSS = SPI_NSS_SOFT;
+  hspi1.Init.BaudRatePrescaler = SPI_BAUDRATEPRESCALER_8;
+  hspi1.Init.FirstBit = SPI_FIRSTBIT_MSB;
+  hspi1.Init.TIMode = SPI_TIMODE_DISABLE;
+  hspi1.Init.CRCCalculation = SPI_CRCCALCULATION_DISABLE;
+  hspi1.Init.CRCPolynomial = 10;
+  if (HAL_SPI_Init(&hspi1) != HAL_OK)
+  {
+    Error_Handler();
+  }
+  /* USER CODE BEGIN SPI1_Init 2 */
+
+  /* USER CODE END SPI1_Init 2 */
+
+}
+
+/**
+  * @brief TIM3 Initialization Function
+  * @param None
+  * @retval None
+  */
+static void MX_TIM3_Init(void)
+{
+
+  /* USER CODE BEGIN TIM3_Init 0 */
+
+  /* USER CODE END TIM3_Init 0 */
+
+  TIM_ClockConfigTypeDef sClockSourceConfig = {0};
+  TIM_MasterConfigTypeDef sMasterConfig = {0};
+  TIM_OC_InitTypeDef sConfigOC = {0};
+
+  /* USER CODE BEGIN TIM3_Init 1 */
+
+  /* USER CODE END TIM3_Init 1 */
+  htim3.Instance = TIM3;
+  htim3.Init.Prescaler = 0;
+  htim3.Init.CounterMode = TIM_COUNTERMODE_UP;
+  htim3.Init.Period = 65536 - 1;
+  htim3.Init.ClockDivision = TIM_CLOCKDIVISION_DIV1;
+  htim3.Init.AutoReloadPreload = TIM_AUTORELOAD_PRELOAD_ENABLE;
+  if (HAL_TIM_Base_Init(&htim3) != HAL_OK)
+  {
+    Error_Handler();
+  }
+  sClockSourceConfig.ClockSource = TIM_CLOCKSOURCE_INTERNAL;
+  if (HAL_TIM_ConfigClockSource(&htim3, &sClockSourceConfig) != HAL_OK)
+  {
+    Error_Handler();
+  }
+  if (HAL_TIM_PWM_Init(&htim3) != HAL_OK)
+  {
+    Error_Handler();
+  }
+  sMasterConfig.MasterOutputTrigger = TIM_TRGO_RESET;
+  sMasterConfig.MasterSlaveMode = TIM_MASTERSLAVEMODE_DISABLE;
+  if (HAL_TIMEx_MasterConfigSynchronization(&htim3, &sMasterConfig) != HAL_OK)
+  {
+    Error_Handler();
+  }
+  sConfigOC.OCMode = TIM_OCMODE_PWM1;
+  sConfigOC.Pulse = 0;
+  sConfigOC.OCPolarity = TIM_OCPOLARITY_HIGH;
+  sConfigOC.OCFastMode = TIM_OCFAST_DISABLE;
+  if (HAL_TIM_PWM_ConfigChannel(&htim3, &sConfigOC, TIM_CHANNEL_3) != HAL_OK)
+  {
+    Error_Handler();
+  }
+  /* USER CODE BEGIN TIM3_Init 2 */
+
+  /* USER CODE END TIM3_Init 2 */
+  HAL_TIM_MspPostInit(&htim3);
+
+}
+
+/**
   * @brief TIM4 Initialization Function
   * @param None
   * @retval None
@@ -313,14 +426,15 @@ static void MX_TIM4_Init(void)
 
   TIM_ClockConfigTypeDef sClockSourceConfig = {0};
   TIM_MasterConfigTypeDef sMasterConfig = {0};
+  TIM_OC_InitTypeDef sConfigOC = {0};
 
   /* USER CODE BEGIN TIM4_Init 1 */
 
   /* USER CODE END TIM4_Init 1 */
   htim4.Instance = TIM4;
-  htim4.Init.Prescaler = 1680 - 1;
+  htim4.Init.Prescaler = 0;
   htim4.Init.CounterMode = TIM_COUNTERMODE_UP;
-  htim4.Init.Period = 1000 - 1;
+  htim4.Init.Period = 1024 - 1;
   htim4.Init.ClockDivision = TIM_CLOCKDIVISION_DIV1;
   htim4.Init.AutoReloadPreload = TIM_AUTORELOAD_PRELOAD_DISABLE;
   if (HAL_TIM_Base_Init(&htim4) != HAL_OK)
@@ -332,15 +446,28 @@ static void MX_TIM4_Init(void)
   {
     Error_Handler();
   }
+  if (HAL_TIM_PWM_Init(&htim4) != HAL_OK)
+  {
+    Error_Handler();
+  }
   sMasterConfig.MasterOutputTrigger = TIM_TRGO_RESET;
   sMasterConfig.MasterSlaveMode = TIM_MASTERSLAVEMODE_DISABLE;
   if (HAL_TIMEx_MasterConfigSynchronization(&htim4, &sMasterConfig) != HAL_OK)
   {
     Error_Handler();
   }
+  sConfigOC.OCMode = TIM_OCMODE_PWM1;
+  sConfigOC.Pulse = 0;
+  sConfigOC.OCPolarity = TIM_OCPOLARITY_HIGH;
+  sConfigOC.OCFastMode = TIM_OCFAST_DISABLE;
+  if (HAL_TIM_PWM_ConfigChannel(&htim4, &sConfigOC, TIM_CHANNEL_1) != HAL_OK)
+  {
+    Error_Handler();
+  }
   /* USER CODE BEGIN TIM4_Init 2 */
 
   /* USER CODE END TIM4_Init 2 */
+  HAL_TIM_MspPostInit(&htim4);
 
 }
 
@@ -422,13 +549,16 @@ static void MX_GPIO_Init(void)
   __HAL_RCC_GPIOA_CLK_ENABLE();
   __HAL_RCC_GPIOB_CLK_ENABLE();
   __HAL_RCC_GPIOD_CLK_ENABLE();
+  __HAL_RCC_GPIOC_CLK_ENABLE();
 
   /*Configure GPIO pin Output Level */
-  HAL_GPIO_WritePin(GPIOB, pin_e_Pin|pin_f_Pin|pin_g_Pin|pin_dp_Pin
-                          |pin_a_Pin|pin_b_Pin|pin_c_Pin|pin_d_Pin, GPIO_PIN_RESET);
+  HAL_GPIO_WritePin(GPIOD, GPIO_PIN_13|GPIO_PIN_14|GPIO_PIN_15, GPIO_PIN_RESET);
 
   /*Configure GPIO pin Output Level */
-  HAL_GPIO_WritePin(GPIOD, GPIO_PIN_12|GPIO_PIN_13|GPIO_PIN_14|GPIO_PIN_15, GPIO_PIN_RESET);
+  HAL_GPIO_WritePin(Latch_GPIO_Port, Latch_Pin, GPIO_PIN_RESET);
+
+  /*Configure GPIO pin Output Level */
+  HAL_GPIO_WritePin(GPIOB, DS_Pin|SH_CP_Pin, GPIO_PIN_RESET);
 
   /*Configure GPIO pin : PA0 */
   GPIO_InitStruct.Pin = GPIO_PIN_0;
@@ -436,25 +566,93 @@ static void MX_GPIO_Init(void)
   GPIO_InitStruct.Pull = GPIO_NOPULL;
   HAL_GPIO_Init(GPIOA, &GPIO_InitStruct);
 
-  /*Configure GPIO pins : pin_e_Pin pin_f_Pin pin_g_Pin pin_dp_Pin
-                           pin_a_Pin pin_b_Pin pin_c_Pin pin_d_Pin */
-  GPIO_InitStruct.Pin = pin_e_Pin|pin_f_Pin|pin_g_Pin|pin_dp_Pin
-                          |pin_a_Pin|pin_b_Pin|pin_c_Pin|pin_d_Pin;
-  GPIO_InitStruct.Mode = GPIO_MODE_OUTPUT_PP;
-  GPIO_InitStruct.Pull = GPIO_NOPULL;
-  GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_LOW;
-  HAL_GPIO_Init(GPIOB, &GPIO_InitStruct);
-
-  /*Configure GPIO pins : PD12 PD13 PD14 PD15 */
-  GPIO_InitStruct.Pin = GPIO_PIN_12|GPIO_PIN_13|GPIO_PIN_14|GPIO_PIN_15;
+  /*Configure GPIO pins : PD13 PD14 PD15 */
+  GPIO_InitStruct.Pin = GPIO_PIN_13|GPIO_PIN_14|GPIO_PIN_15;
   GPIO_InitStruct.Mode = GPIO_MODE_OUTPUT_PP;
   GPIO_InitStruct.Pull = GPIO_NOPULL;
   GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_LOW;
   HAL_GPIO_Init(GPIOD, &GPIO_InitStruct);
 
+  /*Configure GPIO pin : Latch_Pin */
+  GPIO_InitStruct.Pin = Latch_Pin;
+  GPIO_InitStruct.Mode = GPIO_MODE_OUTPUT_PP;
+  GPIO_InitStruct.Pull = GPIO_NOPULL;
+  GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_LOW;
+  HAL_GPIO_Init(Latch_GPIO_Port, &GPIO_InitStruct);
+
+  /*Configure GPIO pin : DS_Pin */
+  GPIO_InitStruct.Pin = DS_Pin;
+  GPIO_InitStruct.Mode = GPIO_MODE_OUTPUT_PP;
+  GPIO_InitStruct.Pull = GPIO_NOPULL;
+  GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_MEDIUM;
+  HAL_GPIO_Init(DS_GPIO_Port, &GPIO_InitStruct);
+
+  /*Configure GPIO pin : SH_CP_Pin */
+  GPIO_InitStruct.Pin = SH_CP_Pin;
+  GPIO_InitStruct.Mode = GPIO_MODE_OUTPUT_PP;
+  GPIO_InitStruct.Pull = GPIO_NOPULL;
+  GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_HIGH;
+  HAL_GPIO_Init(SH_CP_GPIO_Port, &GPIO_InitStruct);
+
 }
 
 /* USER CODE BEGIN 4 */
+
+//ADC1 interrupt
+#if 0
+void HAL_ADC_ConvCpltCallback(ADC_HandleTypeDef* hadc)
+{
+	unsigned int display_value;
+
+	pot_value = HAL_ADC_GetValue(&hadc1);
+	sprintf((char *)tx_adc, "%d", pot_value);
+
+	if (pot_value <= ADC_max/10)
+	{
+		display_value = 0;
+	}
+	else if (pot_value > ADC_max/10 && pot_value <= (ADC_max/10)*2)
+	{
+		display_value = 1;
+	}
+	else if (pot_value > (ADC_max/10)*2 && pot_value <= (ADC_max/10)*3)
+	{
+		display_value = 2;
+	}
+	else if (pot_value > (ADC_max/10)*3 && pot_value <= (ADC_max/10)*4)
+	{
+		display_value = 3;
+	}
+	else if (pot_value > (ADC_max/10)*4 && pot_value <= (ADC_max/10)*5)
+	{
+		display_value = 4;
+	}
+	else if (pot_value > (ADC_max/10)*5 && pot_value <= (ADC_max/10)*6)
+	{
+		display_value = 5;
+	}
+	else if (pot_value > (ADC_max/10)*6 && pot_value <= (ADC_max/10)*7)
+	{
+		display_value = 6;
+	}
+	else if (pot_value > (ADC_max/10)*7 && pot_value <= (ADC_max/10)*8)
+	{
+		display_value = 7;
+	}
+	else if (pot_value > (ADC_max/10)*8 && pot_value <= (ADC_max/10)*9)
+	{
+		display_value = 8;
+	}
+	else if (pot_value > (ADC_max/10)*9 && pot_value <= ADC_max)
+	{
+		display_value = 9;
+	}
+//	seven_segment_display(display_value);
+	__HAL_TIM_SET_COMPARE(&htim4, TIM_CHANNEL_1, pot_value);
+}
+#endif
+
+
 //USART2 interrupt
 /*void HAL_UART_RxCpltCallback(UART_HandleTypeDef *huart){
 

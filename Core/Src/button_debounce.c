@@ -18,9 +18,13 @@ int buttonP_confidencelvl = 0;
 int buttonR_confidencelvl = 0;
 int confidence_threshold = 500;	//sto je vise instrukcija potrebno izvrsiti, threshold se mora povecati
 bool LED_status = 0;	//opciono
+uint8_t newline[] = "\r\n";
+
+
+extern UART_HandleTypeDef huart2;
 
 //Functions
-void button_debounce2(void){
+void button_debounce2(uint8_t *adc_ptr){
 	read_button_state = HAL_GPIO_ReadPin(GPIOA, GPIO_PIN_0);
 	if (read_button_state == 1)
 	{
@@ -42,7 +46,8 @@ void button_debounce2(void){
 
  */		//Add some functions to work with
 
-				seven_segment_display();
+				HAL_UART_Transmit(&huart2, adc_ptr, sizeof(adc_ptr), 50);
+				HAL_UART_Transmit(&huart2, newline, sizeof(newline), 50);
 				buttonP = 1;
 			}
 			else
