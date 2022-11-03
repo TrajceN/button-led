@@ -61,10 +61,14 @@ void Error_Handler(void);
 /* Private defines -----------------------------------------------------------*/
 #define Latch_Pin GPIO_PIN_6
 #define Latch_GPIO_Port GPIOC
-#define DS_Pin GPIO_PIN_4
-#define DS_GPIO_Port GPIOB
-#define SH_CP_Pin GPIO_PIN_5
-#define SH_CP_GPIO_Port GPIOB
+#define DIG0_Pin GPIO_PIN_4
+#define DIG0_GPIO_Port GPIOB
+#define DIG1_Pin GPIO_PIN_5
+#define DIG1_GPIO_Port GPIOB
+#define DIG2_Pin GPIO_PIN_7
+#define DIG2_GPIO_Port GPIOB
+#define DIG3_Pin GPIO_PIN_8
+#define DIG3_GPIO_Port GPIOB
 /* USER CODE BEGIN Private defines */
 
 

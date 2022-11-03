@@ -10,7 +10,7 @@
 
 
 //Declaration of functions
-void button_debounce2();
+void button_debounce2(void);
 void Button_debounce(void);
 
 
