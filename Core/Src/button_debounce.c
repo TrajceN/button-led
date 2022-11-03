@@ -10,6 +10,7 @@
 #include "stm32f4xx_hal.h"
 #include "button_debounce.h"
 #include "stdbool.h"
+#include "main.h"
 
 //Variables of button_debounce2 function----------BOLJA OPCIJA
 bool read_button_state;
@@ -24,7 +25,7 @@ uint8_t newline[] = "\r\n";
 extern UART_HandleTypeDef huart2;
 
 //Functions
-void button_debounce2(uint8_t *adc_ptr){
+void button_debounce2(void){
 	read_button_state = HAL_GPIO_ReadPin(GPIOA, GPIO_PIN_0);
 	if (read_button_state == 1)
 	{
@@ -33,21 +34,19 @@ void button_debounce2(uint8_t *adc_ptr){
 
 			if (buttonP_confidencelvl > confidence_threshold)
 			{
-/*				if (LED_status == 0)
+				if (LED_status == 0)
 				{
 					LED_status = 1;
-					HAL_GPIO_WritePin(GPIOD, GPIO_PIN_12, SET);
-			}
+				}
 				else
 				{
 					LED_status = 0;
-					HAL_GPIO_WritePin(GPIOD, GPIO_PIN_12, RESET);
 				}
 
- */		//Add some functions to work with
+ 		//Add some functions to work with
 
-				HAL_UART_Transmit(&huart2, adc_ptr, sizeof(adc_ptr), 50);
-				HAL_UART_Transmit(&huart2, newline, sizeof(newline), 50);
+//				HAL_UART_Transmit(&huart2, adc_ptr, sizeof(adc_ptr), 50);
+//				HAL_UART_Transmit(&huart2, newline, sizeof(newline), 50);
 				buttonP = 1;
 			}
 			else

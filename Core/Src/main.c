@@ -21,6 +21,7 @@
 
 /* Private includes ----------------------------------------------------------*/
 /* USER CODE BEGIN Includes */
+#include "stdbool.h"
 #include "button_debounce.h"
 #include "stdio.h"
 /* USER CODE END Includes */
@@ -41,6 +42,8 @@
 
 /* Private variables ---------------------------------------------------------*/
 ADC_HandleTypeDef hadc1;
+
+RTC_HandleTypeDef hrtc;
 
 SPI_HandleTypeDef hspi1;
 
@@ -63,51 +66,42 @@ static void MX_USART2_UART_Init(void);
 static void MX_TIM3_Init(void);
 static void MX_ADC1_Init(void);
 static void MX_SPI1_Init(void);
+static void MX_RTC_Init(void);
 /* USER CODE BEGIN PFP */
-void displayDigits(void);
+
 /* USER CODE END PFP */
 
 /* Private user code ---------------------------------------------------------*/
 /* USER CODE BEGIN 0 */
 #define ADC_max htim4.Init.Period
-//VARIABLES
-const int max_speed_limit = 10000 - 1;
-const int lower_speed_limit = 200;
-uint16_t speed = max_speed_limit;
-
-
-uint8_t main_cmd[] = "Enter command:\r\n";
-uint8_t type_cmd[] = "Type display command:\r\n";
-uint8_t buzzer_cmd[] = "Enter buzzer command:\r\n";
-uint8_t error_msg[] = "Invalid command!\r\n";
 
 uint16_t pot_value = 0;
 uint8_t tx_adc[5] = {0};
-
-
-//SPI1 variables
-uint8_t digits[10] = {
-		0B10111111,		//digit 0
-		0B10000110,		//digit 1
-		0B11011011,		//digit 2
-		0B11001111,		//digit 3
-		0B11100110,		//digit 4
-		0B11101101,		//digit 5
-		0B11111101,		//digit 6
-		0B10000111,		//digit 7
-		0B11111111,		//digit 8
-		0B11101111		//digit 9
-};//	 dpgfedcba
-
-void displayDigits(void)
+bool alarm_state = 0;
+void rtc_alarm(bool alarm_status)
 {
-	for (int i = 1; i < 11; i++)
+	static uint16_t alarm_time = 0;
+	if (alarm_status == 1)
 	{
-		HAL_GPIO_WritePin(Latch_GPIO_Port, Latch_Pin, GPIO_PIN_RESET);
-		HAL_SPI_Transmit(&hspi1, digits, i, 50);
-		HAL_GPIO_WritePin(Latch_GPIO_Port, Latch_Pin, GPIO_PIN_SET);
-		HAL_Delay(300);
+		HAL_GPIO_TogglePin(GPIOD, GPIO_PIN_15);
+		if (++alarm_time >= 30)
+		{
+			alarm_time = 0;
+			alarm_status = 0;
+			HAL_UART_Transmit_IT(&huart2, "Alarm OFF\r\n", sizeof("Alarm OFF\r\n"));
+		}
 	}
+}
+//RTC date and time function
+void rtcTimeDate(void)
+{
+	RTC_TimeTypeDef Time;
+	RTC_DateTypeDef Date;
+	static uint8_t mytime[50] = {0};
+	HAL_RTC_GetTime(&hrtc, &Time, RTC_FORMAT_BIN);
+	HAL_RTC_GetDate(&hrtc, &Date, RTC_FORMAT_BIN);
+	sprintf((char*)mytime, "Time>%02d:%02d:%02d.%lu\r\nDate>%02d-%02d-%d\r\n", Time.Hours, Time.Minutes, Time.Seconds, Time.SubSeconds, Date.Date, Date.Month, 2000 + Date.Year);
+	HAL_UART_Transmit_IT(&huart2, mytime, sizeof(mytime));
 }
 /* USER CODE END 0 */
 
@@ -118,8 +112,6 @@ void displayDigits(void)
 int main(void)
 {
   /* USER CODE BEGIN 1 */
-
-
 
   /* USER CODE END 1 */
 
@@ -137,7 +129,6 @@ int main(void)
 
   /* USER CODE BEGIN SysInit */
 
-
   /* USER CODE END SysInit */
 
   /* Initialize all configured peripherals */
@@ -148,16 +139,13 @@ int main(void)
   MX_TIM3_Init();
   MX_ADC1_Init();
   MX_SPI1_Init();
+  MX_RTC_Init();
   /* USER CODE BEGIN 2 */
 
-
-//	HAL_TIM_PWM_Start(&htim4, TIM_CHANNEL_1);
+	HAL_TIM_PWM_Start(&htim4, TIM_CHANNEL_1);
 //  HAL_TIM_PWM_Start(&htim4, TIM_CHANNEL_2);
 //  HAL_TIM_PWM_Start(&htim4, TIM_CHANNEL_3);
 //  HAL_TIM_PWM_Start(&htim4, TIM_CHANNEL_4);
-
-//  HAL_TIM_PWM_Start(&htim3, TIM_CHANNEL_3);
-
   /* USER CODE END 2 */
 
   /* Infinite loop */
@@ -167,52 +155,15 @@ int main(void)
     /* USER CODE END WHILE */
 
     /* USER CODE BEGIN 3 */
+//	  HAL_RTC_GetAlarm(&hrtc, alarm.AlarmDateWeekDay, alarm.Alarm, RTC_FORMAT_BIN);
+//	  displayDigits(display_cnt);
 
-	  displayDigits();
 
 //	  HAL_ADC_Start_IT(&hadc1);
 //	  button_debounce2(tx_adc);
 //	  HAL_ADC_PollForConversion(&hadc1, 1);
 
 //	  RX_uart_cmd();
-
-
-#if 0
-	  HAL_UART_Receive(&huart2, UART2_rxBuffer, sizeof(UART2_rxBuffer), 10000);
-	  for (int k = 0; k < 50; k++)
-	  {
-		  if (UART2_rxBuffer[k] == '\r')
-	 	 {
-			  UART2_rxBuffer[k] = '\0';
-			  break;
-		 }
-
-	  }
-
-	  display = strcmp(UART2_rxBuffer, "Display");
-	  buzzer = strcmp(UART2_rxBuffer, "Buzzer");
-	  if (display == 0)
-	  {
-		  while(display == 0)
-		  {
-			  uart2_SSDisplay();
-		  }
-	  }
-	  else if (buzzer == 0)
-	  {
-		  while(buzzer == 0)
-		  {
-			  uart2_buzzer();
-		  }
-	  }
-	  else
-	  {
-		  HAL_UART_Transmit(&huart2, error_msg, sizeof(error_msg), 1000);
-	  }
-#endif
-//	  button_debounce2();
-
-
 
   }
   /* USER CODE END 3 */
@@ -235,8 +186,9 @@ void SystemClock_Config(void)
   /** Initializes the RCC Oscillators according to the specified parameters
   * in the RCC_OscInitTypeDef structure.
   */
-  RCC_OscInitStruct.OscillatorType = RCC_OSCILLATORTYPE_HSE;
+  RCC_OscInitStruct.OscillatorType = RCC_OSCILLATORTYPE_LSI|RCC_OSCILLATORTYPE_HSE;
   RCC_OscInitStruct.HSEState = RCC_HSE_ON;
+  RCC_OscInitStruct.LSIState = RCC_LSI_ON;
   RCC_OscInitStruct.PLL.PLLState = RCC_PLL_ON;
   RCC_OscInitStruct.PLL.PLLSource = RCC_PLLSOURCE_HSE;
   RCC_OscInitStruct.PLL.PLLM = 4;
@@ -316,6 +268,88 @@ static void MX_ADC1_Init(void)
 }
 
 /**
+  * @brief RTC Initialization Function
+  * @param None
+  * @retval None
+  */
+static void MX_RTC_Init(void)
+{
+
+  /* USER CODE BEGIN RTC_Init 0 */
+
+  /* USER CODE END RTC_Init 0 */
+
+  RTC_TimeTypeDef sTime = {0};
+  RTC_DateTypeDef sDate = {0};
+  RTC_AlarmTypeDef sAlarm = {0};
+
+  /* USER CODE BEGIN RTC_Init 1 */
+
+  /* USER CODE END RTC_Init 1 */
+
+  /** Initialize RTC Only
+  */
+  hrtc.Instance = RTC;
+  hrtc.Init.HourFormat = RTC_HOURFORMAT_24;
+  hrtc.Init.AsynchPrediv = 127;
+  hrtc.Init.SynchPrediv = 252;
+  hrtc.Init.OutPut = RTC_OUTPUT_DISABLE;
+  hrtc.Init.OutPutPolarity = RTC_OUTPUT_POLARITY_HIGH;
+  hrtc.Init.OutPutType = RTC_OUTPUT_TYPE_OPENDRAIN;
+  if (HAL_RTC_Init(&hrtc) != HAL_OK)
+  {
+    Error_Handler();
+  }
+
+  /* USER CODE BEGIN Check_RTC_BKUP */
+
+  /* USER CODE END Check_RTC_BKUP */
+
+  /** Initialize RTC and set the Time and Date
+  */
+  sTime.Hours = 16;
+  sTime.Minutes = 57;
+  sTime.Seconds = 30;
+  sTime.DayLightSaving = RTC_DAYLIGHTSAVING_NONE;
+  sTime.StoreOperation = RTC_STOREOPERATION_RESET;
+  if (HAL_RTC_SetTime(&hrtc, &sTime, RTC_FORMAT_BIN) != HAL_OK)
+  {
+    Error_Handler();
+  }
+  sDate.WeekDay = RTC_WEEKDAY_THURSDAY;
+  sDate.Month = RTC_MONTH_NOVEMBER;
+  sDate.Date = 3;
+  sDate.Year = 22;
+
+  if (HAL_RTC_SetDate(&hrtc, &sDate, RTC_FORMAT_BIN) != HAL_OK)
+  {
+    Error_Handler();
+  }
+
+  /** Enable the Alarm A
+  */
+  sAlarm.AlarmTime.Hours = 16;
+  sAlarm.AlarmTime.Minutes = 58;
+  sAlarm.AlarmTime.Seconds = 0;
+  sAlarm.AlarmTime.SubSeconds = 0;
+  sAlarm.AlarmTime.DayLightSaving = RTC_DAYLIGHTSAVING_NONE;
+  sAlarm.AlarmTime.StoreOperation = RTC_STOREOPERATION_RESET;
+  sAlarm.AlarmMask = RTC_ALARMMASK_NONE;
+  sAlarm.AlarmSubSecondMask = RTC_ALARMSUBSECONDMASK_ALL;
+  sAlarm.AlarmDateWeekDaySel = RTC_ALARMDATEWEEKDAYSEL_DATE;
+  sAlarm.AlarmDateWeekDay = 3;
+  sAlarm.Alarm = RTC_ALARM_A;
+  if (HAL_RTC_SetAlarm_IT(&hrtc, &sAlarm, RTC_FORMAT_BIN) != HAL_OK)
+  {
+    Error_Handler();
+  }
+  /* USER CODE BEGIN RTC_Init 2 */
+
+  /* USER CODE END RTC_Init 2 */
+
+}
+
+/**
   * @brief SPI1 Initialization Function
   * @param None
   * @retval None
@@ -367,7 +401,6 @@ static void MX_TIM3_Init(void)
 
   TIM_ClockConfigTypeDef sClockSourceConfig = {0};
   TIM_MasterConfigTypeDef sMasterConfig = {0};
-  TIM_OC_InitTypeDef sConfigOC = {0};
 
   /* USER CODE BEGIN TIM3_Init 1 */
 
@@ -387,28 +420,15 @@ static void MX_TIM3_Init(void)
   {
     Error_Handler();
   }
-  if (HAL_TIM_PWM_Init(&htim3) != HAL_OK)
-  {
-    Error_Handler();
-  }
   sMasterConfig.MasterOutputTrigger = TIM_TRGO_RESET;
   sMasterConfig.MasterSlaveMode = TIM_MASTERSLAVEMODE_DISABLE;
   if (HAL_TIMEx_MasterConfigSynchronization(&htim3, &sMasterConfig) != HAL_OK)
   {
     Error_Handler();
   }
-  sConfigOC.OCMode = TIM_OCMODE_PWM1;
-  sConfigOC.Pulse = 0;
-  sConfigOC.OCPolarity = TIM_OCPOLARITY_HIGH;
-  sConfigOC.OCFastMode = TIM_OCFAST_DISABLE;
-  if (HAL_TIM_PWM_ConfigChannel(&htim3, &sConfigOC, TIM_CHANNEL_3) != HAL_OK)
-  {
-    Error_Handler();
-  }
   /* USER CODE BEGIN TIM3_Init 2 */
 
   /* USER CODE END TIM3_Init 2 */
-  HAL_TIM_MspPostInit(&htim3);
 
 }
 
@@ -552,19 +572,29 @@ static void MX_GPIO_Init(void)
   __HAL_RCC_GPIOC_CLK_ENABLE();
 
   /*Configure GPIO pin Output Level */
+  HAL_GPIO_WritePin(GPIOB, GPIO_PIN_0|DIG0_Pin|DIG1_Pin|DIG2_Pin
+                          |DIG3_Pin, GPIO_PIN_RESET);
+
+  /*Configure GPIO pin Output Level */
   HAL_GPIO_WritePin(GPIOD, GPIO_PIN_13|GPIO_PIN_14|GPIO_PIN_15, GPIO_PIN_RESET);
 
   /*Configure GPIO pin Output Level */
   HAL_GPIO_WritePin(Latch_GPIO_Port, Latch_Pin, GPIO_PIN_RESET);
-
-  /*Configure GPIO pin Output Level */
-  HAL_GPIO_WritePin(GPIOB, DS_Pin|SH_CP_Pin, GPIO_PIN_RESET);
 
   /*Configure GPIO pin : PA0 */
   GPIO_InitStruct.Pin = GPIO_PIN_0;
   GPIO_InitStruct.Mode = GPIO_MODE_INPUT;
   GPIO_InitStruct.Pull = GPIO_NOPULL;
   HAL_GPIO_Init(GPIOA, &GPIO_InitStruct);
+
+  /*Configure GPIO pins : PB0 DIG0_Pin DIG1_Pin DIG2_Pin
+                           DIG3_Pin */
+  GPIO_InitStruct.Pin = GPIO_PIN_0|DIG0_Pin|DIG1_Pin|DIG2_Pin
+                          |DIG3_Pin;
+  GPIO_InitStruct.Mode = GPIO_MODE_OUTPUT_PP;
+  GPIO_InitStruct.Pull = GPIO_NOPULL;
+  GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_LOW;
+  HAL_GPIO_Init(GPIOB, &GPIO_InitStruct);
 
   /*Configure GPIO pins : PD13 PD14 PD15 */
   GPIO_InitStruct.Pin = GPIO_PIN_13|GPIO_PIN_14|GPIO_PIN_15;
@@ -580,23 +610,14 @@ static void MX_GPIO_Init(void)
   GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_LOW;
   HAL_GPIO_Init(Latch_GPIO_Port, &GPIO_InitStruct);
 
-  /*Configure GPIO pin : DS_Pin */
-  GPIO_InitStruct.Pin = DS_Pin;
-  GPIO_InitStruct.Mode = GPIO_MODE_OUTPUT_PP;
-  GPIO_InitStruct.Pull = GPIO_NOPULL;
-  GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_MEDIUM;
-  HAL_GPIO_Init(DS_GPIO_Port, &GPIO_InitStruct);
-
-  /*Configure GPIO pin : SH_CP_Pin */
-  GPIO_InitStruct.Pin = SH_CP_Pin;
-  GPIO_InitStruct.Mode = GPIO_MODE_OUTPUT_PP;
-  GPIO_InitStruct.Pull = GPIO_NOPULL;
-  GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_HIGH;
-  HAL_GPIO_Init(SH_CP_GPIO_Port, &GPIO_InitStruct);
-
 }
 
 /* USER CODE BEGIN 4 */
+void HAL_RTC_AlarmAEventCallback(RTC_HandleTypeDef *hrtc)
+{
+	alarm_state = 1;
+	HAL_UART_Transmit_IT(&huart2, "Alarm ON\r\n", sizeof("Alarm ON\r\n"));
+}
 
 //ADC1 interrupt
 #if 0
@@ -653,23 +674,7 @@ void HAL_ADC_ConvCpltCallback(ADC_HandleTypeDef* hadc)
 #endif
 
 
-//USART2 interrupt
-/*void HAL_UART_RxCpltCallback(UART_HandleTypeDef *huart){
 
-	uint8_t result;
-	HAL_UART_Transmit(&huart2, UART2_rxBuffer, 4, 50);
-	HAL_UART_Receive_IT(&huart2, UART2_rxBuffer, 4);
-
-	result = strcmp(UART2_rxBuffer, "led1");
-	if (result == 1) {
-		HAL_GPIO_WritePin(GPIOD, GPIO_PIN_12, 0);
-	}else {
-		HAL_GPIO_WritePin(GPIOD, GPIO_PIN_12, 1);
-	}
-
-
-}
-*/
 //Button interrupt callback
 /*
 void HAL_GPIO_EXTI_Callback(uint16_t GPIO_Pin){
@@ -680,15 +685,15 @@ void HAL_GPIO_EXTI_Callback(uint16_t GPIO_Pin){
 */
 
 //Callback: timer has reset
-/*void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim)
-{
-	if (htim == &htim10)
-	{
-		timer_LEDs();
-	}
+//void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim)
+//{
+//	if (htim == &htim10)
+//	{
+//		HAL_GPIO_WritePin(GPIOB, GPIO_PIN_0, GPIO_PIN_RESET);
+//	}
+//
+//}
 
-}
-*/
 /* USER CODE END 4 */
 
 /**
