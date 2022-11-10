@@ -20,7 +20,6 @@
 /* Includes ------------------------------------------------------------------*/
 #include "main.h"
 #include "stm32f4xx_it.h"
-#include "stdbool.h"
 /* Private includes ----------------------------------------------------------*/
 /* USER CODE BEGIN Includes */
 /* USER CODE END Includes */
@@ -44,20 +43,19 @@
 /* USER CODE BEGIN PV */
 extern volatile uint16_t tick_cnt;
 extern uint16_t display_cnt;
-extern bool alarm_state;
-
 
 extern RTC_HandleTypeDef hrtc;
-extern RTC_TimeTypeDef sTime;
-extern RTC_DateTypeDef sDate;
+extern RTC_TimeTypeDef Time;
+extern RTC_DateTypeDef Date;
 
+extern uint16_t rtc_clock;
 /* USER CODE END PV */
 
 /* Private function prototypes -----------------------------------------------*/
 /* USER CODE BEGIN PFP */
 extern void displayDigits(uint16_t digit_to_display);
 extern void rtcTimeDate(void);
-extern void rtc_alarm(bool alarm_status);
+extern void trig_sensor(void);
 /* USER CODE END PFP */
 
 /* Private user code ---------------------------------------------------------*/
@@ -67,9 +65,9 @@ extern void rtc_alarm(bool alarm_status);
 
 /* External variables --------------------------------------------------------*/
 extern ADC_HandleTypeDef hadc1;
-extern RTC_HandleTypeDef hrtc;
 extern SPI_HandleTypeDef hspi1;
-extern TIM_HandleTypeDef htim10;
+extern TIM_HandleTypeDef htim1;
+extern TIM_HandleTypeDef htim4;
 extern UART_HandleTypeDef huart2;
 /* USER CODE BEGIN EV */
 
@@ -202,15 +200,16 @@ void SysTick_Handler(void)
   if (tick_cnt >= 1000)
   {
 	  tick_cnt = 0;
-	  if (++display_cnt > 9999)
-	  {
-		  display_cnt = 0;
-	  }
+//	  if (++display_cnt > 9999)
+//	  {
+//		  display_cnt = 0;
+//	  }
 	  rtcTimeDate();
-	  rtc_alarm(alarm_state);
+	  trig_sensor();
+	  rtc_clock = Time.Hours * 100 + Time.Minutes;
   }
 
-  displayDigits(display_cnt);
+  displayDigits(rtc_clock);
 
   /* USER CODE END SysTick_IRQn 0 */
   HAL_IncTick();
@@ -241,17 +240,31 @@ void ADC_IRQHandler(void)
 }
 
 /**
-  * @brief This function handles TIM1 update interrupt and TIM10 global interrupt.
+  * @brief This function handles TIM1 capture compare interrupt.
   */
-void TIM1_UP_TIM10_IRQHandler(void)
+void TIM1_CC_IRQHandler(void)
 {
-  /* USER CODE BEGIN TIM1_UP_TIM10_IRQn 0 */
+  /* USER CODE BEGIN TIM1_CC_IRQn 0 */
 
-  /* USER CODE END TIM1_UP_TIM10_IRQn 0 */
-  HAL_TIM_IRQHandler(&htim10);
-  /* USER CODE BEGIN TIM1_UP_TIM10_IRQn 1 */
+  /* USER CODE END TIM1_CC_IRQn 0 */
+  HAL_TIM_IRQHandler(&htim1);
+  /* USER CODE BEGIN TIM1_CC_IRQn 1 */
 
-  /* USER CODE END TIM1_UP_TIM10_IRQn 1 */
+  /* USER CODE END TIM1_CC_IRQn 1 */
+}
+
+/**
+  * @brief This function handles TIM4 global interrupt.
+  */
+void TIM4_IRQHandler(void)
+{
+  /* USER CODE BEGIN TIM4_IRQn 0 */
+
+  /* USER CODE END TIM4_IRQn 0 */
+  HAL_TIM_IRQHandler(&htim4);
+  /* USER CODE BEGIN TIM4_IRQn 1 */
+
+  /* USER CODE END TIM4_IRQn 1 */
 }
 
 /**
@@ -280,20 +293,6 @@ void USART2_IRQHandler(void)
   /* USER CODE BEGIN USART2_IRQn 1 */
 
   /* USER CODE END USART2_IRQn 1 */
-}
-
-/**
-  * @brief This function handles RTC alarms A and B interrupt through EXTI line 17.
-  */
-void RTC_Alarm_IRQHandler(void)
-{
-  /* USER CODE BEGIN RTC_Alarm_IRQn 0 */
-
-  /* USER CODE END RTC_Alarm_IRQn 0 */
-  HAL_RTC_AlarmIRQHandler(&hrtc);
-  /* USER CODE BEGIN RTC_Alarm_IRQn 1 */
-
-  /* USER CODE END RTC_Alarm_IRQn 1 */
 }
 
 /* USER CODE BEGIN 1 */
