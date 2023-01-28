@@ -22,6 +22,7 @@
 #include "stm32f4xx_it.h"
 /* Private includes ----------------------------------------------------------*/
 /* USER CODE BEGIN Includes */
+
 /* USER CODE END Includes */
 
 /* Private typedef -----------------------------------------------------------*/
@@ -43,12 +44,14 @@
 /* USER CODE BEGIN PV */
 extern volatile uint16_t tick_cnt;
 extern uint16_t display_cnt;
+extern uint16_t display_temp;
 
 extern RTC_HandleTypeDef hrtc;
 extern RTC_TimeTypeDef Time;
 extern RTC_DateTypeDef Date;
 
 extern uint16_t rtc_clock;
+
 /* USER CODE END PV */
 
 /* Private function prototypes -----------------------------------------------*/
@@ -56,6 +59,9 @@ extern uint16_t rtc_clock;
 extern void displayDigits(uint16_t digit_to_display);
 extern void rtcTimeDate(void);
 extern void trig_sensor(void);
+extern void LCD_Set_RTC(uint8_t*, uint8_t*);
+extern void LCD_Set_HCSR04(uint8_t *distance);
+extern void Button_debounce(void);
 /* USER CODE END PFP */
 
 /* Private user code ---------------------------------------------------------*/
@@ -65,6 +71,7 @@ extern void trig_sensor(void);
 
 /* External variables --------------------------------------------------------*/
 extern ADC_HandleTypeDef hadc1;
+extern I2C_HandleTypeDef hi2c3;
 extern SPI_HandleTypeDef hspi1;
 extern TIM_HandleTypeDef htim1;
 extern TIM_HandleTypeDef htim4;
@@ -204,12 +211,10 @@ void SysTick_Handler(void)
 //	  {
 //		  display_cnt = 0;
 //	  }
-	  rtcTimeDate();
-	  trig_sensor();
-	  rtc_clock = Time.Hours * 100 + Time.Minutes;
+	  //rtc_clock = Time.Hours * 100 + Time.Minutes;
   }
 
-  displayDigits(rtc_clock);
+  displayDigits(display_temp);
 
   /* USER CODE END SysTick_IRQn 0 */
   HAL_IncTick();
@@ -224,6 +229,20 @@ void SysTick_Handler(void)
 /* For the available peripheral interrupt handler names,                      */
 /* please refer to the startup file (startup_stm32f4xx.s).                    */
 /******************************************************************************/
+
+/**
+  * @brief This function handles EXTI line0 interrupt.
+  */
+void EXTI0_IRQHandler(void)
+{
+  /* USER CODE BEGIN EXTI0_IRQn 0 */
+
+  /* USER CODE END EXTI0_IRQn 0 */
+  HAL_GPIO_EXTI_IRQHandler(button_IT_Pin);
+  /* USER CODE BEGIN EXTI0_IRQn 1 */
+
+  /* USER CODE END EXTI0_IRQn 1 */
+}
 
 /**
   * @brief This function handles ADC1, ADC2 and ADC3 global interrupts.
@@ -293,6 +312,20 @@ void USART2_IRQHandler(void)
   /* USER CODE BEGIN USART2_IRQn 1 */
 
   /* USER CODE END USART2_IRQn 1 */
+}
+
+/**
+  * @brief This function handles I2C3 event interrupt.
+  */
+void I2C3_EV_IRQHandler(void)
+{
+  /* USER CODE BEGIN I2C3_EV_IRQn 0 */
+
+  /* USER CODE END I2C3_EV_IRQn 0 */
+  HAL_I2C_EV_IRQHandler(&hi2c3);
+  /* USER CODE BEGIN I2C3_EV_IRQn 1 */
+
+  /* USER CODE END I2C3_EV_IRQn 1 */
 }
 
 /* USER CODE BEGIN 1 */

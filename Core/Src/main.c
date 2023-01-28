@@ -25,6 +25,8 @@
 #include "button_debounce.h"
 #include "stdio.h"
 #include "lcd.h"
+#include "tmp75.h"
+#include "sonicsensor.h"
 /* USER CODE END Includes */
 
 /* Private typedef -----------------------------------------------------------*/
@@ -44,6 +46,8 @@
 /* Private variables ---------------------------------------------------------*/
 ADC_HandleTypeDef hadc1;
 
+I2C_HandleTypeDef hi2c3;
+
 RTC_HandleTypeDef hrtc;
 
 SPI_HandleTypeDef hspi1;
@@ -54,7 +58,8 @@ TIM_HandleTypeDef htim4;
 UART_HandleTypeDef huart2;
 
 /* USER CODE BEGIN PV */
-
+void LCD_print_HCSR04(uint8_t *distance);
+void LCD_print_RTC(uint8_t *time, uint8_t *date);
 /* USER CODE END PV */
 
 /* Private function prototypes -----------------------------------------------*/
@@ -66,42 +71,89 @@ static void MX_ADC1_Init(void);
 static void MX_SPI1_Init(void);
 static void MX_RTC_Init(void);
 static void MX_TIM1_Init(void);
+static void MX_I2C3_Init(void);
 /* USER CODE BEGIN PFP */
 
 RTC_TimeTypeDef Time;
 RTC_DateTypeDef Date;
-//TIM_OC_InitTypeDef tim4_OC;
+
+Lcd_HandleTypeDef LCD_ret;
 /* USER CODE END PFP */
 
 /* Private user code ---------------------------------------------------------*/
 /* USER CODE BEGIN 0 */
+/*****************************************************GLOBAL VARIABLES***********************************************************/
+uint8_t rtc_time[15] = {0};
+uint8_t rtc_date[15] = {0};
+uint16_t rtc_clock;
+
+uint8_t tx_distance[20] = {0};
+
+uint8_t tmp_buf[12];
+uint16_t display_temp = 0;
+
+uint8_t lcd_page = 0;
+Lcd_PinType lcd_pins[4] = {D4_Pin, D5_Pin, D6_Pin, D7_Pin};
+Lcd_PortType lcd_ports[4] = {D4_GPIO_Port, D5_GPIO_Port, D6_GPIO_Port, D7_GPIO_Port};
+
 #define ADC_max htim4.Init.Period
 uint16_t pot_value = 0;
 uint8_t tx_adc[5] = {0};
 
-//Lcd_HandleTypeDef LCD_arg;
-//uint16_t lcd_pins[4] = {D4_Pin, D5_Pin, D6_Pin, D7_Pin};
-//Lcd_PortType lcd_ports[4] = {D4_GPIO_Port, D5_GPIO_Port, D6_GPIO_Port, D7_GPIO_Port};
-
-uint16_t rtc_clock;
+/************************************************************************************************************************************/
+/*********************************************************FUNCTIONS*****************************************************************/
 //RTC date and time function
 void rtcTimeDate(void)
 {
 //	static uint8_t mytime[50] = {0};
 	HAL_RTC_GetTime(&hrtc, &Time, RTC_FORMAT_BIN);
 	HAL_RTC_GetDate(&hrtc, &Date, RTC_FORMAT_BIN);
+	sprintf((char*)rtc_time, "Time>%02d:%02d:%02d", Time.Hours, Time.Minutes, Time.Seconds);
+	sprintf((char*)rtc_date, "Date>%02d-%02d-%d", Date.Date, Date.Month, 2000 + Date.Year);
 //	sprintf((char*)mytime, "Time>%02d:%02d:%02d.%lu\r\nDate>%02d-%02d-%d\r\n", Time.Hours, Time.Minutes, Time.Seconds, Time.SubSeconds, Date.Date, Date.Month, 2000 + Date.Year);
-//	HAL_UART_Transmit_IT(&huart2, mytime, sizeof(mytime));
+	//	HAL_UART_Transmit_IT(&huart2, mytime, sizeof(mytime));
 }
-//---------------------------------Ultra-sonic sensor---------------------------------------------------
+
 void delay_uS(uint16_t microsec)
 {
 	__HAL_TIM_SET_COUNTER(&htim1, 0);
 	while(__HAL_TIM_GET_COUNTER(&htim1) < microsec);
 }
 
+void LCD_print_RTC(uint8_t *time, uint8_t *date){
+	Lcd_cursor(&LCD_ret, 0, 0);
+	Lcd_string(&LCD_ret, (char*)time);
+	Lcd_cursor(&LCD_ret, 1, 0);
+	Lcd_string(&LCD_ret, (char*)date);
+}
 
+void LCD_print_HCSR04(uint8_t *distance){
+	  Lcd_cursor(&LCD_ret, 0, 0);
+	  Lcd_string(&LCD_ret, "HC-SR04");
+	  Lcd_cursor(&LCD_ret, 1, 0);
+	  Lcd_string(&LCD_ret, "Distance: ");
+	  Lcd_cursor(&LCD_ret, 1, 10);
+	  Lcd_string(&LCD_ret, (char*)distance);
+}
 
+void LCD_print_Temp(void){
+	Lcd_cursor(&LCD_ret, 0, 0);
+	Lcd_string(&LCD_ret, "TMP75");
+	Lcd_cursor(&LCD_ret, 1, 0);
+	Lcd_string(&LCD_ret, "Temp: ");
+	Lcd_cursor(&LCD_ret, 1, 6);
+	Lcd_string(&LCD_ret, (char*)tmp_buf);
+}
+
+void LCD_Pages(void){
+	if (lcd_page == 1) {
+		LCD_print_RTC(rtc_time, rtc_date);
+	}else if (lcd_page == 2) {
+		LCD_print_Temp();
+	}else if (lcd_page == 3) {
+		LCD_print_HCSR04(tx_distance);
+	}
+}
 /* USER CODE END 0 */
 
 /**
@@ -138,10 +190,12 @@ int main(void)
   MX_SPI1_Init();
   MX_RTC_Init();
   MX_TIM1_Init();
+  MX_I2C3_Init();
   /* USER CODE BEGIN 2 */
-
+  LCD_ret = Lcd_create(lcd_ports, lcd_pins, lcd_RS_GPIO_Port, lcd_RS_Pin, lcd_E_GPIO_Port, lcd_E_Pin, LCD_4_BIT_MODE);
+  Lcd_cursor(&LCD_ret, 0, 1);
+  Lcd_string(&LCD_ret, "*Press button*");
   HAL_TIM_IC_Start_IT(&htim1, TIM_CHANNEL_3);
-
   /* USER CODE END 2 */
 
   /* Infinite loop */
@@ -152,7 +206,12 @@ int main(void)
     /* USER CODE END WHILE */
 
     /* USER CODE BEGIN 3 */
-
+	//  button_debounce2();
+	  Button_debounce();
+	  rtcTimeDate();
+	  trig_sensor();
+	  tmp75_read_temp(res_12bits);
+	  LCD_Pages();
 //	  displayDigits(display_cnt);
 //	  HAL_ADC_Start_IT(&hadc1);
 //	  button_debounce2(tx_adc);
@@ -262,6 +321,40 @@ static void MX_ADC1_Init(void)
 }
 
 /**
+  * @brief I2C3 Initialization Function
+  * @param None
+  * @retval None
+  */
+static void MX_I2C3_Init(void)
+{
+
+  /* USER CODE BEGIN I2C3_Init 0 */
+
+  /* USER CODE END I2C3_Init 0 */
+
+  /* USER CODE BEGIN I2C3_Init 1 */
+
+  /* USER CODE END I2C3_Init 1 */
+  hi2c3.Instance = I2C3;
+  hi2c3.Init.ClockSpeed = 400000;
+  hi2c3.Init.DutyCycle = I2C_DUTYCYCLE_2;
+  hi2c3.Init.OwnAddress1 = 0;
+  hi2c3.Init.AddressingMode = I2C_ADDRESSINGMODE_7BIT;
+  hi2c3.Init.DualAddressMode = I2C_DUALADDRESS_DISABLE;
+  hi2c3.Init.OwnAddress2 = 0;
+  hi2c3.Init.GeneralCallMode = I2C_GENERALCALL_DISABLE;
+  hi2c3.Init.NoStretchMode = I2C_NOSTRETCH_DISABLE;
+  if (HAL_I2C_Init(&hi2c3) != HAL_OK)
+  {
+    Error_Handler();
+  }
+  /* USER CODE BEGIN I2C3_Init 2 */
+
+  /* USER CODE END I2C3_Init 2 */
+
+}
+
+/**
   * @brief RTC Initialization Function
   * @param None
   * @retval None
@@ -301,7 +394,7 @@ static void MX_RTC_Init(void)
   /** Initialize RTC and set the Time and Date
   */
   sTime.Hours = 12;
-  sTime.Minutes = 49;
+  sTime.Minutes = 29;
   sTime.Seconds = 23;
   sTime.DayLightSaving = RTC_DAYLIGHTSAVING_NONE;
   sTime.StoreOperation = RTC_STOREOPERATION_RESET;
@@ -309,9 +402,9 @@ static void MX_RTC_Init(void)
   {
     Error_Handler();
   }
-  sDate.WeekDay = RTC_WEEKDAY_FRIDAY;
+  sDate.WeekDay = RTC_WEEKDAY_SATURDAY;
   sDate.Month = RTC_MONTH_NOVEMBER;
-  sDate.Date = 4;
+  sDate.Date = 19;
   sDate.Year = 22;
 
   if (HAL_RTC_SetDate(&hrtc, &sDate, RTC_FORMAT_BIN) != HAL_OK)
@@ -519,11 +612,11 @@ static void MX_GPIO_Init(void)
   /*Configure GPIO pin Output Level */
   HAL_GPIO_WritePin(Latch_GPIO_Port, Latch_Pin, GPIO_PIN_RESET);
 
-  /*Configure GPIO pin : PA0 */
-  GPIO_InitStruct.Pin = GPIO_PIN_0;
-  GPIO_InitStruct.Mode = GPIO_MODE_INPUT;
+  /*Configure GPIO pin : button_IT_Pin */
+  GPIO_InitStruct.Pin = button_IT_Pin;
+  GPIO_InitStruct.Mode = GPIO_MODE_IT_RISING;
   GPIO_InitStruct.Pull = GPIO_NOPULL;
-  HAL_GPIO_Init(GPIOA, &GPIO_InitStruct);
+  HAL_GPIO_Init(button_IT_GPIO_Port, &GPIO_InitStruct);
 
   /*Configure GPIO pins : PB0 lcd_RW_Pin lcd_RS_Pin lcd_E_Pin
                            DIG0_Pin DIG1_Pin DIG2_Pin DIG3_Pin */
@@ -554,6 +647,10 @@ static void MX_GPIO_Init(void)
   GPIO_InitStruct.Pull = GPIO_NOPULL;
   GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_LOW;
   HAL_GPIO_Init(Latch_GPIO_Port, &GPIO_InitStruct);
+
+  /* EXTI interrupt init*/
+  HAL_NVIC_SetPriority(EXTI0_IRQn, 0, 0);
+  HAL_NVIC_EnableIRQ(EXTI0_IRQn);
 
 }
 
@@ -616,13 +713,16 @@ void HAL_ADC_ConvCpltCallback(ADC_HandleTypeDef* hadc)
 
 
 //Button interrupt callback
-/*
-void HAL_GPIO_EXTI_Callback(uint16_t GPIO_Pin){
-	if (GPIO_Pin == GPIO_PIN_0) {
-		read_button = HAL_GPIO_ReadPin(GPIOA, GPIO_PIN_0);
-	}
-}
-*/
+
+//void HAL_GPIO_EXTI_Callback(uint16_t GPIO_Pin){
+//	if (GPIO_Pin == button_IT_Pin) {
+//		uint8_t page_num = 3;
+//		if (++lcd_page > page_num) {
+//			lcd_page = 1;
+//		}
+//	}
+//}
+
 
 //Callback: timer has reset
 //void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim)

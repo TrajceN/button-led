@@ -17,7 +17,7 @@ void displayDigit(uint8_t display, uint8_t digit)
 	HAL_SPI_Transmit_IT(&hspi1, &digits[digit], 1);
 	HAL_GPIO_WritePin(GPIOB, displaySelect[display], GPIO_PIN_SET);
 
-	if (display == 2)
+	if (display == 3)
 	{
 		HAL_GPIO_WritePin(GPIOB, GPIO_PIN_0, GPIO_PIN_RESET);
 	}

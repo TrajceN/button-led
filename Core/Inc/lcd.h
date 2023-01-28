@@ -81,7 +81,6 @@ typedef struct {
 
 } Lcd_HandleTypeDef;
 
-
 /************************************** Public functions **************************************/
 void Lcd_init(Lcd_HandleTypeDef * lcd);
 void Lcd_int(Lcd_HandleTypeDef * lcd, int number);

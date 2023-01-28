@@ -14,12 +14,7 @@
 extern TIM_HandleTypeDef htim1;
 extern UART_HandleTypeDef huart2;
 
-uint32_t IC_value1 = 0;
-uint32_t IC_value2 = 0;
-uint32_t time_difference = 0;
-uint8_t first_val_capture = 0;
-uint16_t distance = 0;
-uint8_t tx_distance[20] = {0};
+extern uint8_t tx_distance[20];
 
 extern void delay_uS(uint16_t microsec);
 void trig_sensor(void);
